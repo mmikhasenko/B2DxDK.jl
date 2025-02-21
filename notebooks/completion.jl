@@ -6,29 +6,32 @@ using InteractiveUtils
 
 # ╔═╡ fbf4886a-a2ad-4bbf-864d-9314cb0f45b1
 let
-	using HadronicLineshapes
-	using OrderedCollections
-	using ThreeBodyDecays
-	using LinearAlgebra
-	using Measurements
-	using Statistics
-	using Parameters
-	using DataFrames.PrettyTables
-	using DataFrames
-	using Setfield
-	using QuadGK
-	using Plots
-	using Optim
-	using JSON
-	using Cuba
-	# 
-	using Random
-	Random.seed!(1234)
+    using HadronicLineshapes
+    using OrderedCollections
+    using ThreeBodyDecays
+    using LinearAlgebra
+    using Measurements
+    using Statistics
+    using Parameters
+    using DataFrames.PrettyTables
+    using DataFrames
+    using Setfield
+    using QuadGK
+    using Plots
+    using Optim
+    using JSON
+    using Cuba
+    # 
+    using Random
+    Random.seed!(1234)
 end
 
 # ╔═╡ 3c2b7684-59d4-4266-9365-f8b7d3a71fdd
 md"""
-# Three-body decays
+# Implementation of $B^+\to D^-D^{*+} K^+$
+
+- Paper link: ([inspirehep](https://inspirehep.net/literature/2794793)), ([arxiv](https://arxiv.org/pdf/2406.03156))
+- Internal documsntation: ([TWiki](https://twiki.cern.ch/twiki/bin/viewauth/LHCbPhysics/Bm2DstmDpKm)), ([ANA-NOTE](https://twiki.cern.ch/twiki/pub/LHCbPhysics/Bm2DstmDpKm/Bm2DstDKm_CombFit_note_final.pdf)) 
 """
 
 # ╔═╡ a7f75def-7006-4afe-91f9-1a73514d8b5d
@@ -43,10 +46,10 @@ $B^+ \to D^- D^{*+} K^+$
 
 # ╔═╡ db1e2d20-ded6-42e1-8ddc-e965ea1ae60e
 begin
-	const mB = 5.27941 # B+
-	const mD = 1.86965 # D+
-	const mDx = 2.0102558 # Dx+: m(D) + Δm(D*,D) from PDG
-	const mK = 0.493677 # K+
+    const mB = 5.27934 # B+
+    const mD = 1.86965 # D+
+    const mDx = 2.01026 # Dx+: m(D) + Δm(D*,D) from PDG
+    const mK = 0.493677 # K+
 end;
 
 # ╔═╡ 49e4360a-8e84-4ff6-ac9f-9610b929ca60
@@ -56,8 +59,8 @@ end;
 
 # ╔═╡ f6f916c4-b18c-4dd5-9522-4b8b0f77d5e0
 tbs = let
-	ms = ThreeBodyMasses(mD, mDx, mK; m0=mB);
-	ThreeBodySystem(ms, two_js);
+    ms = ThreeBodyMasses(mD, mDx, mK; m0 = mB)
+    ThreeBodySystem(ms, two_js)
 end;
 
 # ╔═╡ c2b128a2-a057-4aef-91b3-9240cbc5471e
@@ -67,17 +70,17 @@ md"""
 """
 
 # ╔═╡ 0f68b6d3-7b4a-4df6-915f-1962308bac8b
-function BreitWignerSDwaves(; m,Γ, γS, d)
-	fr = [γS, 1-γS]
-	channels=map(zip([0,2], fr)) do (l, x)
-		ma, mb = mD, mDx
-		# 
-		p = HadronicLineshapes.breakup(m, ma, mb)
-		gsq =  m * Γ / (2 * p / m) * x / BlattWeisskopf{l}(d)(p)^2
-		# 
-		(; gsq, ma, mb, l, d)
-	end
-	MultichannelBreitWigner(; m, channels)
+function BreitWignerSDwaves(; m, Γ, γS, d)
+    fr = [γS, 1 - γS]
+    channels = map(zip([0, 2], fr)) do (l, x)
+        ma, mb = mD, mDx
+        # 
+        p = HadronicLineshapes.breakup(m, ma, mb)
+        gsq = m * Γ / (2 * p / m) * x / BlattWeisskopf{l}(d)(p)^2
+        # 
+        (; gsq, ma, mb, l, d)
+    end
+    MultichannelBreitWigner(; m, channels)
 end
 
 # ╔═╡ b062d8dc-4e27-4d31-b234-8757375a8071
@@ -85,89 +88,90 @@ const EFF = BreitWigner(3.85, 0.001);
 
 # ╔═╡ 13874ee7-3c4f-47e4-a658-c0608b4c9ce7
 begin
-	@with_kw struct NRexp <: HadronicLineshapes.AbstractFlexFunc
-		αβ::ComplexF64
-		m0::Float64
-	end
-	(f::NRexp)(σ::Float64) = exp(f.αβ*(σ-f.m0^2))
-	# 
-	const ConstantLineshape = WrapFlexFunction(x->1.0)
+    @with_kw struct NRexp <: HadronicLineshapes.AbstractFlexFunc
+        αβ::ComplexF64
+        m0::Float64
+    end
+    (f::NRexp)(σ::Float64) = exp(f.αβ * (σ - f.m0^2))
+    # 
+    const ConstantLineshape = WrapFlexFunction(x -> 1.0)
 end
 
 # ╔═╡ e32aeb71-bf20-4beb-bdec-f75716bbed90
-resonances = [
-	(; jp=jp"1+", name="EFF(1++)", lineshape=EFF),
-	# 
-	(; jp=jp"0-", name="ηc(3945)", lineshape=BreitWigner(3.945, 0.13)),
-	(; jp=jp"2+", name="χc2(3930)", lineshape=BreitWigner(3.922, 0.0352)),
-	(; jp=jp"1+", name="hc(4000)", lineshape=BreitWignerSDwaves(m=4.0, Γ=0.184, γS=0.3, d=3.0)),
-	(; jp=jp"1+", name="χc1(4010)", lineshape=BreitWigner(4.0125, 0.0627)),
-	(; jp=jp"1-", name="ψ(4040)", lineshape=BreitWigner(4.04, 0.084)),
-	(; jp=jp"1+", name="hc(4300)", lineshape=BreitWigner(4.3073, 0.058)),
-	# Tcbarsbar
-	(; jp=jp"0+", name="Tcs0(2870)", lineshape=BreitWigner(m=2.914, Γ=0.128, ma=mD, mb=mK, l=0, d=3.0)),
-	(; jp=jp"1-", name="Tcs1(2900)", lineshape=BreitWigner(m=2.887, Γ=0.092, ma=mD, mb=mK, l=1, d=3.0)),
-	# NR
-	(; jp=jp"1-", name="NR(1--)", lineshape=ConstantLineshape),
-	(; jp=jp"0-", name="NR(0--)", lineshape=ConstantLineshape),
-	(; jp=jp"1+", name="NR(1++)", lineshape=ConstantLineshape),
-	(; jp=jp"0-", name="NR(0-+)", lineshape=NRexp(αβ=0.11-0.34im, m0=4.35))
-] |> DataFrame
+resonances =
+    [
+        (; jp = jp"1+", name = "EFF(1++)", lineshape = EFF),
+        # 
+        (; jp = jp"0-", name = "ηc(3945)", lineshape = BreitWigner(3.945, 0.13)),
+        (; jp = jp"2+", name = "χc2(3930)", lineshape = BreitWigner(3.922, 0.0352)),
+        (; jp = jp"1+", name = "hc(4000)", lineshape = BreitWignerSDwaves(m = 4.0, Γ = 0.184, γS = cos(0.8)^2, d = 3.0)),
+        (; jp = jp"1+", name = "χc1(4010)", lineshape = BreitWignerSDwaves(m = 4.0125, Γ = 0.0627, γS = cos(0.47)^2, d = 3.0)),
+        (; jp = jp"1-", name = "ψ(4040)", lineshape = BreitWigner(4.04, 0.084)),
+        (; jp = jp"1+", name = "hc(4300)", lineshape = BreitWignerSDwaves(m = 4.3073, Γ = 0.058, γS = cos(1.02)^2, d = 3.0)),
+        # Tcbarsbar
+        (; jp = jp"0+", name = "Tcs0(2870)", lineshape = BreitWigner(m = 2.914, Γ = 0.128, ma = mD, mb = mK, l = 0, d = 3.0)),
+        (; jp = jp"1-", name = "Tcs1(2900)", lineshape = BreitWigner(m = 2.887, Γ = 0.092, ma = mD, mb = mK, l = 1, d = 3.0)),
+        # NR
+        (; jp = jp"1-", name = "NR(1--)", lineshape = ConstantLineshape),
+        (; jp = jp"0-", name = "NR(0--)", lineshape = ConstantLineshape),
+        (; jp = jp"1+", name = "NR(1++)", lineshape = ConstantLineshape),
+        (; jp = jp"0-", name = "NR(0-+)", lineshape = NRexp(αβ = 0.11 - 0.34im, m0 = 4.35)),
+    ] |> DataFrame
 
 # ╔═╡ 8d710e27-93ec-4d81-a090-d679233d0a77
 decay_chains = [
-	(k=3, resonance_name="EFF(1++)", l=0),
-	# 
-	(k=3, resonance_name="ηc(3945)"),
-	(k=3, resonance_name="χc2(3930)"),
-	(k=3, resonance_name="hc(4000)", l=0),
-	# (k=3, resonance_name="hc(4000)", l=2),
-	(k=3, resonance_name="χc1(4010)", l=0),
-	# (k=3, resonance_name="χc1(4010)", l=2),
-	(k=3, resonance_name="ψ(4040)"),
-	(k=3, resonance_name="hc(4300)", l=0),
-	# (k=3, resonance_name="hc(4300)", l=2),
-	# 
-	(k=3, resonance_name="NR(1--)"),
-	(k=3, resonance_name="NR(0--)"),
-	(k=3, resonance_name="NR(1++)", l=0),
-	(k=3, resonance_name="NR(0-+)"),
-	# 
-	(k=2, resonance_name="Tcs0(2870)"),
-	(k=2, resonance_name="Tcs1(2900)", L=0),
+    (k = 3, resonance_name = "EFF(1++)", l = 0),
+    # 
+    (k = 3, resonance_name = "ηc(3945)"),
+    (k = 3, resonance_name = "χc2(3930)"),
+    (k = 3, resonance_name = "hc(4000)", l = 0),
+    # (k=3, resonance_name="hc(4000)", l=2),
+    (k = 3, resonance_name = "χc1(4010)", l = 0),
+    # (k=3, resonance_name="χc1(4010)", l=2),
+    (k = 3, resonance_name = "ψ(4040)"),
+    (k = 3, resonance_name = "hc(4300)", l = 0),
+    # (k=3, resonance_name="hc(4300)", l=2),
+    # 
+    (k = 3, resonance_name = "NR(1--)"),
+    (k = 3, resonance_name = "NR(0--)"),
+    (k = 3, resonance_name = "NR(1++)", l = 0),
+    (k = 3, resonance_name = "NR(0-+)"),
+    # 
+    (k = 2, resonance_name = "Tcs0(2870)"),
+    (k = 2, resonance_name = "Tcs1(2900)", L = 0),
 ];
 
 # ╔═╡ 4322da22-798f-48d8-af05-216c958bab41
 chains = let
-	resonance_dict = LittleDict(
-		resonances.name .=> NamedTuple.(eachrow(resonances)))
-	# 	
-	map(decay_chains) do dc
-		@unpack k, resonance_name = dc
-		_jp = resonance_dict[resonance_name].jp
-		comprete_data = complete_l_s_L_S(_jp, tbs.two_js, [pc, pv], dc; k)
-		@unpack L,S,l,s = comprete_data
-		# 
-		two_j=_jp.two_j
-		# 
-		d = 3.0
-		X = resonance_dict[resonance_name].lineshape
-		ff_Rk = BlattWeisskopf{div(x2(L),2)}(d)(breakup_Rk(tbs.ms; k))
-		ff_ij = BlattWeisskopf{div(x2(l),2)}(d)(breakup_ij(tbs.ms; k))
-		Xlineshape = X * ff_Rk * ff_ij
-		# 
-		HRk = RecouplingLS((L,S) .|> x2)
-		Hij = RecouplingLS((l,s) .|> x2)
-		# 
-		DecayChain(; k, two_j, Xlineshape, Hij, HRk, tbs)
-	end
+    resonance_dict = LittleDict(
+        resonances.name .=> NamedTuple.(eachrow(resonances)))
+    # 	
+    map(decay_chains) do dc
+        @unpack k, resonance_name = dc
+        _jp = resonance_dict[resonance_name].jp
+        comprete_data = complete_l_s_L_S(_jp, tbs.two_js, [pc, pv], dc; k)
+        @unpack L, S, l, s = comprete_data
+        # 
+        two_j = _jp.two_j
+        # 
+        d = 3.0
+        X = resonance_dict[resonance_name].lineshape
+        ff_Rk = BlattWeisskopf{div(x2(L), 2)}(d)(breakup_Rk(tbs.ms; k))
+        ff_ij = BlattWeisskopf{div(x2(l), 2)}(d)(breakup_ij(tbs.ms; k))
+        Xlineshape = X * ff_Rk * ff_ij
+        # 
+        HRk = RecouplingLS((L, S) .|> x2)
+        Hij = RecouplingLS((l, s) .|> x2)
+        # 
+        DecayChain(; k, two_j, Xlineshape, Hij, HRk, tbs)
+    end
 end;
 
 # ╔═╡ e5bbf96f-2642-40a9-a324-c5b2aea7e587
 const model_pure = let
-	names = getproperty.(decay_chains, :resonance_name) .*
-		"_l" .* [ch.Hij.two_ls[1] |> d2 for ch in chains] 
-	ThreeBodyDecay(names .=> zip(fill(1.0+0.0im, length(chains)), chains));
+    names = getproperty.(decay_chains, :resonance_name) .*
+            "_l" .* [ch.Hij.two_ls[1] |> d2 for ch in chains]
+    ThreeBodyDecay(names .=> zip(fill(1.0 + 0.0im, length(chains)), chains))
 end;
 
 # ╔═╡ 808ef024-d742-4799-8847-df7531759f4b
@@ -180,11 +184,11 @@ const nMC_draft = 1000;
 
 # ╔═╡ 5a5601d0-45f4-49b3-aad1-faabf9cb17a7
 const phsp_sample = let
-	ms = masses(model_pure)
-	_draft = mapslices(rand(nMC_draft, 2); dims=2) do y
-		y2σs(y, ms; k=1)
-	end |> vec
-	filter(x->isphysical(x, ms), _draft)
+    ms = masses(model_pure)
+    _draft = mapslices(rand(nMC_draft, 2); dims = 2) do y
+        y2σs(y, ms; k = 1)
+    end |> vec
+    filter(x -> isphysical(x, ms), _draft)
 end;
 
 # ╔═╡ 2648555f-3afd-4fec-99bb-11fa82ecb89d
@@ -210,64 +214,64 @@ $I_{ij} = |c_i||c_j||X_{ij}|\cos(Δ_{ij}+\phi_j-\phi_i)$
 """
 
 # ╔═╡ a8f27f31-1ee4-432a-a3fc-04e4c9b0da01
-integral_computation = let 
-	n = length(model_pure)
-	T = typeof(model_pure.couplings)
-	bare_integral_matrix1 = map(Iterators.product(1:n, 1:n)) do (i, j)
-		mask = (1:n .== i) .|| (1:n .== j)
-		values = model_pure.couplings .* mask
-		# 
-		_model = @set model_pure.couplings = T(values)
-		fs(σs) = unpolarized_intensity(_model, σs)
-		mean(fs, phsp_sample)
-	end
-	bare_integral_matrix2 = map(Iterators.product(1:n, 1:n)) do (i, j)
-		values =
-			model_pure.couplings .* (1:n .== i) .+
-			model_pure.couplings .* (1:n .== j) .* 1im
-		# 
-		_model = @set model_pure.couplings = T(values)
-		fs(σs) = unpolarized_intensity(_model, σs)
-		mean(fs, phsp_sample)
-	end
-	# 
-	(; bare_integral_matrix1, bare_integral_matrix2)
+integral_computation = let
+    n = length(model_pure)
+    T = typeof(model_pure.couplings)
+    bare_integral_matrix1 = map(Iterators.product(1:n, 1:n)) do (i, j)
+        mask = (1:n .== i) .|| (1:n .== j)
+        values = model_pure.couplings .* mask
+        # 
+        _model = @set model_pure.couplings = T(values)
+        fs(σs) = unpolarized_intensity(_model, σs)
+        mean(fs, phsp_sample)
+    end
+    bare_integral_matrix2 = map(Iterators.product(1:n, 1:n)) do (i, j)
+        values =
+            model_pure.couplings .* (1:n .== i) .+
+            model_pure.couplings .* (1:n .== j) .* 1im
+        # 
+        _model = @set model_pure.couplings = T(values)
+        fs(σs) = unpolarized_intensity(_model, σs)
+        mean(fs, phsp_sample)
+    end
+    # 
+    (; bare_integral_matrix1, bare_integral_matrix2)
 end;
 
 # ╔═╡ 556560f6-7d59-4719-92a6-91b54e1b15b6
 const integral_matrix = let
-		m1,m2 = integral_computation
-		d1 = diag(m1)
-		d2 = diag(m2)
-		#
-		sum_d = d1'.+ d1 - 2Diagonal(d1)
-		# 
-		m1_off_diag = m1-Diagonal(d1)
-		m1′ = Diagonal(d1) + (m1_off_diag - sum_d) / 2
-		# 
-		m2_off_diag = m2-Diagonal(d2)
-		m2′ = (m2_off_diag - sum_d) / 2
-		#
-		Hermitian(m1′ + 1im .* m2′)
-	end;
+    m1, m2 = integral_computation
+    d1 = diag(m1)
+    d2 = diag(m2)
+    #
+    sum_d = d1' .+ d1 - 2Diagonal(d1)
+    # 
+    m1_off_diag = m1 - Diagonal(d1)
+    m1′ = Diagonal(d1) + (m1_off_diag - sum_d) / 2
+    # 
+    m2_off_diag = m2 - Diagonal(d2)
+    m2′ = (m2_off_diag - sum_d) / 2
+    #
+    Hermitian(m1′ + 1im .* m2′)
+end;
 
 # ╔═╡ b41f00af-aa1e-457c-85d8-95b757b499b1
 let # test if matrix is constructed correctly
-	i,j  = 2,7
-	# 
-	c1 = [k == i for k in 1:size(integral_matrix, 1)]
-	c2 = [k == j for k in 1:size(integral_matrix, 1)]
-	c_rr = c1 + c2
-	c_ir = c1 * 1im + c2
-	# 
-	@assert (c_rr' * integral_matrix * c_rr) ≈
-		integral_computation.bare_integral_matrix1[i,j]
-	#
-	@assert (c_ir' * integral_matrix * c_ir) ≈
-		integral_computation.bare_integral_matrix2[i,j]
-	# 
-	@assert integral_matrix[i,i] ≈ integral_computation.bare_integral_matrix1[i,i]
-	@assert integral_matrix[j,j] ≈ integral_computation.bare_integral_matrix1[j,j]
+    i, j = 2, 7
+    # 
+    c1 = [k == i for k in 1:size(integral_matrix, 1)]
+    c2 = [k == j for k in 1:size(integral_matrix, 1)]
+    c_rr = c1 + c2
+    c_ir = c1 * 1im + c2
+    # 
+    @assert (c_rr' * integral_matrix * c_rr) ≈
+            integral_computation.bare_integral_matrix1[i, j]
+    #
+    @assert (c_ir' * integral_matrix * c_ir) ≈
+            integral_computation.bare_integral_matrix2[i, j]
+    # 
+    @assert integral_matrix[i, i] ≈ integral_computation.bare_integral_matrix1[i, i]
+    @assert integral_matrix[j, j] ≈ integral_computation.bare_integral_matrix1[j, j]
 end
 
 # ╔═╡ e42021bf-a6f4-4ad3-bfa8-adbcabceffa3
@@ -280,26 +284,26 @@ const nFits = 30
 
 # ╔═╡ b3af8e27-8b9f-49a8-bf35-601dd67ce65e
 function fit_phases(X, I; δI = fill(1.0, size(I)))
-	#
-	δtot = sum(I .± δI).err
-	# 
-	r = sqrt.(diag(I) ./ diag(X))
-	#
-	n = size(X,1)
-	function loss(ϕ_n1)
-		ϕ = vcat([0], ϕ_n1)
-		_I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
-		mismatch = I .- _I
-		mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
-	end
-	init_unit = rand(n-1)
-	init_phases = π .* (2init_unit.-1)
-	step = 2π/10000
-	optimation_result = optimize(loss, init_phases, BFGS(
-		initial_invH = x -> Matrix{eltype(x)}(step^2*LinearAlgebra.I, length(x), length(x))
-	), Optim.Options(iterations=1000), autodiff=:forward)
-	phases = vcat([0.0], optimation_result.minimizer)
-	(; phases, optimation_result)
+    #
+    δtot = sum(I .± δI).err
+    # 
+    r = sqrt.(diag(I) ./ diag(X))
+    #
+    n = size(X, 1)
+    function loss(ϕ_n1)
+        ϕ = vcat([0], ϕ_n1)
+        _I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
+        mismatch = I .- _I
+        mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
+    end
+    init_unit = rand(n - 1)
+    init_phases = π .* (2init_unit .- 1)
+    step = 2π / 10000
+    optimation_result = optimize(loss, init_phases, BFGS(
+            initial_invH = x -> Matrix{eltype(x)}(step^2 * LinearAlgebra.I, length(x), length(x)),
+        ), Optim.Options(iterations = 1000), autodiff = :forward)
+    phases = vcat([0.0], optimation_result.minimizer)
+    (; phases, optimation_result)
 end
 
 # ╔═╡ 942bc39d-063a-4faf-97dc-9f7e3d361465
@@ -309,77 +313,77 @@ md"""
 
 # ╔═╡ 67f1ce27-701f-4b90-bcf9-4b61e69bea42
 interference_data = let
-	file_name = joinpath(@__DIR__, "..", "data", "interference.json")
-	open(JSON.parse, file_name);
+    file_name = joinpath(@__DIR__, "..", "data", "interference.json")
+    open(JSON.parse, file_name)
 end;
 
 # ╔═╡ dc096c5c-1c0e-4356-b9dc-ea99a76c934d
 function from_diag_to_matrix(representation; waves, waves_ref)
-	m = representation
-	n = length(m)
-	I = map(Iterators.product(1:n, 1:n)) do (i,j)
-		_i = max(i,j)
-		_j = min(i,j)
-		m[_i][_j]
-	end
-	D = Diagonal(diag(I)) + (I - Diagonal(diag(I)))/2
-	# 
-	orders = map(waves_ref) do w
-		findfirst(x->x==w, waves)
-	end
-	# 
-	D[orders,orders]
+    m = representation
+    n = length(m)
+    I = map(Iterators.product(1:n, 1:n)) do (i, j)
+        _i = max(i, j)
+        _j = min(i, j)
+        m[_i][_j]
+    end
+    D = Diagonal(diag(I)) + (I - Diagonal(diag(I))) / 2
+    # 
+    orders = map(waves_ref) do w
+        findfirst(x -> x == w, waves)
+    end
+    # 
+    D[orders, orders]
 end
 
 # ╔═╡ a01515c9-4f11-43f0-ac96-75f395c8d894
 const M = from_diag_to_matrix(
-	interference_data["matrix"];
-		waves = interference_data["waves"],
-		waves_ref = model_pure.names);
+    interference_data["matrix"];
+    waves = interference_data["waves"],
+    waves_ref = model_pure.names);
 
 # ╔═╡ 9fb5077c-2070-436d-974c-5a4cf9338870
 const δM = from_diag_to_matrix(
-	interference_data["uncertainty"];
-		waves = interference_data["waves"],
-		waves_ref = model_pure.names);
+    interference_data["uncertainty"];
+    waves = interference_data["waves"],
+    waves_ref = model_pure.names);
 
 # ╔═╡ 8f7b0710-d69f-4f5c-8e93-cc0760ba7496
 repeated_fits = let
-	X = integral_matrix 
-	I = M
-	r = sqrt.(diag(I) ./ diag(X))
-	#
-	Xbar = X .* r .* r'
-	# 
-	map(1:nFits) do _
-		fit_phases(Xbar, I; δI = δM)
-	end
+    X = integral_matrix
+    I = M
+    r = sqrt.(diag(I) ./ diag(X))
+    #
+    Xbar = X .* r .* r'
+    # 
+    map(1:nFits) do _
+        fit_phases(Xbar, I; δI = δM)
+    end
 end;
 
 # ╔═╡ ca77bfef-5d44-44ed-b025-f9c6ad962d28
 map(repeated_fits) do fit
-	X = integral_matrix 
-	I = M
-	r = sqrt.(diag(I) ./ diag(X))
-	ϕ = fit.phases
-	c = r .* cis.(fit.phases)
-	# 
-	c' * X * c |> real
+    X = integral_matrix
+    I = M
+    r = sqrt.(diag(I) ./ diag(X))
+    ϕ = fit.phases
+    c = r .* cis.(fit.phases)
+    # 
+    c' * X * c |> real
 end
 
 # ╔═╡ 2167c35c-9ad4-4f1a-be02-945e430fe9d7
 chi2_fits = map(repeated_fits) do fit
-	fit.optimation_result.minimum
+    fit.optimation_result.minimum
 end;
 
 # ╔═╡ e6097d3e-deb1-4847-8f61-6b1e6de6a646
-stephist(chi2_fits, bins=range(0,50,100), fill=0, alpha=0.4, linealpha=1)
+stephist(chi2_fits, bins = range(0, 50, 100), fill = 0, alpha = 0.4, linealpha = 1)
 
 # ╔═╡ 70654c29-85aa-4aff-af3a-4d505831c8ea
 begin
-	repeated_fits_sorted = sort(repeated_fits, by=x->x.optimation_result.minimum)
-	bast_phases = repeated_fits_sorted[1].phases
-	mismatch_interferences = repeated_fits_sorted[1].optimation_result.minimum
+    repeated_fits_sorted = sort(repeated_fits, by = x -> x.optimation_result.minimum)
+    bast_phases = repeated_fits_sorted[1].phases
+    mismatch_interferences = repeated_fits_sorted[1].optimation_result.minimum
 end
 
 # ╔═╡ e1d3c055-f2f0-4760-ba8c-8f82445dac99
@@ -392,27 +396,27 @@ md"""
 
 # ╔═╡ 15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 const model = let
-	T = typeof(model_pure.couplings)
-	values = model_pure.couplings .* sqrt.(diag(M) ./ diag(integral_matrix))
-	values .*= cis.(bast_phases)
-	@set model_pure.couplings = T(values)
+    T = typeof(model_pure.couplings)
+    values = model_pure.couplings .* sqrt.(diag(M) ./ diag(integral_matrix))
+    values .*= cis.(bast_phases)
+    @set model_pure.couplings = T(values)
 end
 
 # ╔═╡ 848a45c0-7802-4865-8347-00ad6cf4e573
 let
-	c = model.couplings
-	X = integral_matrix
-	r = abs.(c)
-	ϕ = angle.(c)
-	FF_matrix = r' .* r .* abs.(X) .* cos.(angle.(X) .+ ϕ' .- ϕ)
-	# 
-	clim=(-30,30)
-	c=:terrain
-	aspect_ratio=1
-	plot(
-		heatmap(FF_matrix; aspect_ratio, clim, c, title="julia"),
-		heatmap(M; aspect_ratio, clim, c, title="paper"),
-		grid=(1,2), size=(700,300))
+    c = model.couplings
+    X = integral_matrix
+    r = abs.(c)
+    ϕ = angle.(c)
+    FF_matrix = r' .* r .* abs.(X) .* cos.(angle.(X) .+ ϕ' .- ϕ)
+    # 
+    clim = (-30, 30)
+    c = :terrain
+    aspect_ratio = 1
+    plot(
+        heatmap(FF_matrix; aspect_ratio, clim, c, title = "julia"),
+        heatmap(M; aspect_ratio, clim, c, title = "paper"),
+        grid = (1, 2), size = (700, 300))
 end
 
 # ╔═╡ 8e527f9e-a9d0-437b-8eae-e38fd052cf62
@@ -421,10 +425,10 @@ md"""
 """
 
 # ╔═╡ b4626253-2914-4c7a-b39e-24fefab2673b
-plot(masses(model), aspect_ratio=1, iσx=3, iσy=2,
-	xlab="m²(D-Dx+) [GeV²]", ylab="m²(D-K+) [GeV²]",
-	c=palette(:viridis)) do σs
-	unpolarized_intensity(model, σs)
+plot(masses(model), aspect_ratio = 1, iσx = 3, iσy = 2,
+    xlab = "m²(D-Dx+) [GeV²]", ylab = "m²(D-K+) [GeV²]",
+    c = palette(:viridis)) do σs
+    unpolarized_intensity(model, σs)
 end
 
 # ╔═╡ 108f9da0-baa6-44ff-80e7-b864a73b428e
@@ -437,56 +441,56 @@ md"""
 
 # ╔═╡ 6c56df2c-7a97-4eac-b6ff-8cd863fc9142
 let
-	k=3
-	ev = range(sqrt.(lims(masses(model); k))..., 90)
-	# 
-	plot(xlab="m(D⁻Dˣ⁺) [GeV]")
-	plot!(ev) do e
-		I = Base.Fix1(unpolarized_intensity, model)
-		integrand = projection_integrand(I, masses(model), e^2; k)
-		e * quadgk(integrand, 0, 1)[1]
-	end
-	# 
-	T = typeof(model.couplings)
-	_model = @set model.couplings = T(model.couplings .* 
-		[occursin("χc1", n) for n in model.names])
-	# 
-	plot!(ev) do e
-		I = Base.Fix1(unpolarized_intensity, _model)
-		integrand = projection_integrand(I, masses(_model), e^2; k)
-		e * quadgk(integrand, 0, 1)[1]
-	end
+    k = 3
+    ev = range(sqrt.(lims(masses(model); k))..., 90)
+    # 
+    plot(xlab = "m(D⁻Dˣ⁺) [GeV]")
+    plot!(ev) do e
+        I = Base.Fix1(unpolarized_intensity, model)
+        integrand = projection_integrand(I, masses(model), e^2; k)
+        e * quadgk(integrand, 0, 1)[1]
+    end
+    # 
+    T = typeof(model.couplings)
+    _model = @set model.couplings = T(model.couplings .*
+                                      [occursin("χc1", n) for n in model.names])
+    # 
+    plot!(ev) do e
+        I = Base.Fix1(unpolarized_intensity, _model)
+        integrand = projection_integrand(I, masses(_model), e^2; k)
+        e * quadgk(integrand, 0, 1)[1]
+    end
 end
 
 # ╔═╡ 7dedd655-71a2-449d-97a2-7cc5935be854
 let
-	k=2
-	ev = range(sqrt.(lims(masses(model); k))..., 50)
-	# \^+
-	plot(xlab="m(D⁻K⁺) [GeV]")
-	plot!(ev) do e
-		I = Base.Fix1(unpolarized_intensity, model)
-		integrand = projection_integrand(I, masses(model), e^2; k)
-		e * quadgk(integrand, 0, 1)[1]
-	end
-	# 
-	T = typeof(model.couplings)
-	# 
-	_model = @set model.couplings = T(model.couplings .* 
-		[occursin("Tcs0", n) for n in model.names])
-	plot!(ev) do e
-		I = Base.Fix1(unpolarized_intensity, _model)
-		integrand = projection_integrand(I, masses(_model), e^2; k)
-		e * quadgk(integrand, 0, 1)[1]
-	end
-	# 
-	_model = @set model.couplings = T(model.couplings .* 
-		[occursin("Tcs1", n) for n in model.names])
-	plot!(ev) do e
-		I = Base.Fix1(unpolarized_intensity, _model)
-		integrand = projection_integrand(I, masses(_model), e^2; k)
-		e * quadgk(integrand, 0, 1)[1]
-	end
+    k = 2
+    ev = range(sqrt.(lims(masses(model); k))..., 50)
+    # \^+
+    plot(xlab = "m(D⁻K⁺) [GeV]")
+    plot!(ev) do e
+        I = Base.Fix1(unpolarized_intensity, model)
+        integrand = projection_integrand(I, masses(model), e^2; k)
+        e * quadgk(integrand, 0, 1)[1]
+    end
+    # 
+    T = typeof(model.couplings)
+    # 
+    _model = @set model.couplings = T(model.couplings .*
+                                      [occursin("Tcs0", n) for n in model.names])
+    plot!(ev) do e
+        I = Base.Fix1(unpolarized_intensity, _model)
+        integrand = projection_integrand(I, masses(_model), e^2; k)
+        e * quadgk(integrand, 0, 1)[1]
+    end
+    # 
+    _model = @set model.couplings = T(model.couplings .*
+                                      [occursin("Tcs1", n) for n in model.names])
+    plot!(ev) do e
+        I = Base.Fix1(unpolarized_intensity, _model)
+        integrand = projection_integrand(I, masses(_model), e^2; k)
+        e * quadgk(integrand, 0, 1)[1]
+    end
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
