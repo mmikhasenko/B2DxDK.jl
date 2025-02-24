@@ -14,7 +14,6 @@ mn = let
     [m[i, 1:i] for i in 1:nWaves]
 end
 
-
 # 
 δt = CSV.read(joinpath("data", "fit_frac1_pw_err.csv"), DataFrame)
 # 

@@ -121,16 +121,17 @@ resonances =
 # ╔═╡ 8d710e27-93ec-4d81-a090-d679233d0a77
 decay_chains = [
     (k = 3, resonance_name = "EFF(1++)", l = 0),
+    (k = 3, resonance_name = "EFF(1++)", l = 2),
     # 
     (k = 3, resonance_name = "ηc(3945)"),
     (k = 3, resonance_name = "χc2(3930)"),
     (k = 3, resonance_name = "hc(4000)", l = 0),
-    # (k=3, resonance_name="hc(4000)", l=2),
+    (k=3, resonance_name="hc(4000)", l=2),
     (k = 3, resonance_name = "χc1(4010)", l = 0),
-    # (k=3, resonance_name="χc1(4010)", l=2),
+    (k=3, resonance_name="χc1(4010)", l=2),
     (k = 3, resonance_name = "ψ(4040)"),
     (k = 3, resonance_name = "hc(4300)", l = 0),
-    # (k=3, resonance_name="hc(4300)", l=2),
+    (k=3, resonance_name="hc(4300)", l=2),
     # 
     (k = 3, resonance_name = "NR(1--)"),
     (k = 3, resonance_name = "NR(0--)"),
@@ -139,6 +140,8 @@ decay_chains = [
     # 
     (k = 2, resonance_name = "Tcs0(2870)"),
     (k = 2, resonance_name = "Tcs1(2900)", L = 0),
+	(k = 2, resonance_name = "Tcs1(2900)", L = 1),
+	(k = 2, resonance_name = "Tcs1(2900)", L = 2)
 ];
 
 # ╔═╡ 4322da22-798f-48d8-af05-216c958bab41
@@ -171,6 +174,7 @@ end;
 const model_pure = let
     names = getproperty.(decay_chains, :resonance_name) .*
             "_l" .* [ch.Hij.two_ls[1] |> d2 for ch in chains]
+	names .*= [(ch.k == 2) ? "_L$(ch.HRk.two_ls[1] |> d2)" : ""  for ch in chains]
     ThreeBodyDecay(names .=> zip(fill(1.0 + 0.0im, length(chains)), chains))
 end;
 
@@ -180,7 +184,7 @@ md"""
 """
 
 # ╔═╡ 869ce97b-f2c5-4f0b-a0f1-531097bfe19d
-const nMC_draft = 1000;
+const nMC_draft = 10_000;
 
 # ╔═╡ 5a5601d0-45f4-49b3-aad1-faabf9cb17a7
 const phsp_sample = let
@@ -298,7 +302,7 @@ function fit_phases(X, I; δI = fill(1.0, size(I)))
     end
     init_unit = rand(n - 1)
     init_phases = π .* (2init_unit .- 1)
-    step = 2π / 10000
+    step = 2π / 1000
     optimation_result = optimize(loss, init_phases, BFGS(
             initial_invH = x -> Matrix{eltype(x)}(step^2 * LinearAlgebra.I, length(x), length(x)),
         ), Optim.Options(iterations = 1000), autodiff = :forward)
@@ -313,12 +317,15 @@ md"""
 
 # ╔═╡ 67f1ce27-701f-4b90-bcf9-4b61e69bea42
 interference_data = let
-    file_name = joinpath(@__DIR__, "..", "data", "interference.json")
+    file_name = joinpath(@__DIR__, "..", "data", "interference_tf.json")
     open(JSON.parse, file_name)
 end;
 
 # ╔═╡ dc096c5c-1c0e-4356-b9dc-ea99a76c934d
 function from_diag_to_matrix(representation; waves, waves_ref)
+	# 
+	@assert length(waves_ref) == length(waves)
+	# 
     m = representation
     n = length(m)
     I = map(Iterators.product(1:n, 1:n)) do (i, j)
@@ -329,7 +336,9 @@ function from_diag_to_matrix(representation; waves, waves_ref)
     D = Diagonal(diag(I)) + (I - Diagonal(diag(I))) / 2
     # 
     orders = map(waves_ref) do w
-        findfirst(x -> x == w, waves)
+        index = findfirst(x -> x == w, waves)
+		index === nothing && error("Wave $w not found")
+		index
     end
     # 
     D[orders, orders]
@@ -337,13 +346,13 @@ end
 
 # ╔═╡ a01515c9-4f11-43f0-ac96-75f395c8d894
 const M = from_diag_to_matrix(
-    interference_data["matrix"];
+    interference_data["matrix"] .* 100;
     waves = interference_data["waves"],
     waves_ref = model_pure.names);
 
 # ╔═╡ 9fb5077c-2070-436d-974c-5a4cf9338870
 const δM = from_diag_to_matrix(
-    interference_data["uncertainty"];
+    interference_data["uncertainty"] .* 100;
     waves = interference_data["waves"],
     waves_ref = model_pure.names);
 
@@ -377,7 +386,7 @@ chi2_fits = map(repeated_fits) do fit
 end;
 
 # ╔═╡ e6097d3e-deb1-4847-8f61-6b1e6de6a646
-stephist(chi2_fits, bins = range(0, 50, 100), fill = 0, alpha = 0.4, linealpha = 1)
+stephist(chi2_fits, bins = range(0, 100, 100), fill = 0, alpha = 0.4, linealpha = 1)
 
 # ╔═╡ 70654c29-85aa-4aff-af3a-4d505831c8ea
 begin
@@ -388,6 +397,43 @@ end
 
 # ╔═╡ e1d3c055-f2f0-4760-ba8c-8f82445dac99
 fractions = model_pure.names .=> diag(M);
+
+# ╔═╡ 7f98134f-565d-487f-bc5a-b3ca30dd25d8
+md"""
+### VS Paper
+Compare the files to paper tables
+"""
+
+# ╔═╡ f8e10abf-9a7d-435a-aa72-77b10ef52838
+paper_matrix = let
+    _name = joinpath(@__DIR__, "..", "data", "interference_paper.json")
+    _data = open(JSON.parse, _name)
+	segs = map(w->split(w, "_")[1], model_pure.names) |> unique
+	from_diag_to_matrix(
+	    _data["matrix"] .* 100;
+	    waves = _data["waves"],
+	    waves_ref = segs);
+end;
+
+# ╔═╡ ac0123a3-4c0d-45bf-8c10-19513e82037e
+combination_matrix = let
+	segs = map(w->split(w, "_")[1], model_pure.names)
+	res = unique(segs)
+	hcat([segs .== s0 for s0 in res]...)
+end;
+
+# ╔═╡ 992a634a-5864-4dbf-922d-c7ea12abccc9
+partially_summed_M = let
+	nR = size(combination_matrix, 2)
+	map(Iterators.product(1:nR,1:nR)) do (i,j)
+		indices_i = combination_matrix[:, i]
+		indices_j = combination_matrix[:, j]
+		sum(M[indices_i,indices_j]) .* 100
+	end
+end;
+
+# ╔═╡ c4339c0d-3962-46f5-ad64-4abed0e88306
+round.(partially_summed_M-paper_matrix, digits=2) 
 
 # ╔═╡ d115dd1c-851e-4d69-859b-6b9767764806
 md"""
@@ -410,8 +456,8 @@ let
     ϕ = angle.(c)
     FF_matrix = r' .* r .* abs.(X) .* cos.(angle.(X) .+ ϕ' .- ϕ)
     # 
-    clim = (-30, 30)
-    c = :terrain
+    clim = (-10, 10)
+    c = Plots.cgrad(:terrain; rev=true)
     aspect_ratio = 1
     plot(
         heatmap(FF_matrix; aspect_ratio, clim, c, title = "julia"),
@@ -2100,6 +2146,11 @@ version = "1.4.1+2"
 # ╠═a01515c9-4f11-43f0-ac96-75f395c8d894
 # ╠═9fb5077c-2070-436d-974c-5a4cf9338870
 # ╠═e1d3c055-f2f0-4760-ba8c-8f82445dac99
+# ╟─7f98134f-565d-487f-bc5a-b3ca30dd25d8
+# ╠═f8e10abf-9a7d-435a-aa72-77b10ef52838
+# ╠═ac0123a3-4c0d-45bf-8c10-19513e82037e
+# ╠═992a634a-5864-4dbf-922d-c7ea12abccc9
+# ╠═c4339c0d-3962-46f5-ad64-4abed0e88306
 # ╟─d115dd1c-851e-4d69-859b-6b9767764806
 # ╠═15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 # ╠═848a45c0-7802-4865-8347-00ad6cf4e573
