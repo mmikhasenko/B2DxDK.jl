@@ -286,20 +286,28 @@ md"""
 # ╔═╡ bcd8e17c-a599-4781-aad4-f73987c60d69
 const nFits = 30
 
+# ╔═╡ b613f233-0f74-4be3-a05d-9b7d771b71d5
+function gloss(ϕ, X, I, δI, δtot)
+    r = sqrt.(diag(I) ./ diag(X))
+	_I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
+	mismatch = I .- _I
+	mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
+end
+
 # ╔═╡ b3af8e27-8b9f-49a8-bf35-601dd67ce65e
 function fit_phases(X, I; δI = fill(1.0, size(I)))
     #
     δtot = sum(I .± δI).err
     # 
-    r = sqrt.(diag(I) ./ diag(X))
-    #
     n = size(X, 1)
-    function loss(ϕ_n1)
-        ϕ = vcat([0], ϕ_n1)
-        _I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
-        mismatch = I .- _I
-        mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
-    end
+	function loss(ϕ, X, I, δI, δtot)
+    	r = sqrt.(diag(I) ./ diag(X))
+	    _I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
+	    mismatch = I .- _I
+		mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
+	end
+    loss(ϕ_n1) = loss(vcat([0], ϕ_n1), X, I, δI, δtot)
+	# 
     init_unit = rand(n - 1)
     init_phases = π .* (2init_unit .- 1)
     step = 2π / 1000
@@ -410,7 +418,18 @@ paper_matrix = let
     _data = open(JSON.parse, _name)
 	segs = map(w->split(w, "_")[1], model_pure.names) |> unique
 	from_diag_to_matrix(
-	    _data["matrix"] .* 100;
+	    _data["matrix"];
+	    waves = _data["waves"],
+	    waves_ref = segs);
+end;
+
+# ╔═╡ e0d11ae3-84f2-4a3c-a06d-f2eaa0389519
+δpaper_matrix = let
+    _name = joinpath(@__DIR__, "..", "data", "interference_paper.json")
+    _data = open(JSON.parse, _name)
+	segs = map(w->split(w, "_")[1], model_pure.names) |> unique
+	from_diag_to_matrix(
+	    _data["uncertainty"];
 	    waves = _data["waves"],
 	    waves_ref = segs);
 end;
@@ -428,23 +447,35 @@ partially_summed_M = let
 	map(Iterators.product(1:nR,1:nR)) do (i,j)
 		indices_i = combination_matrix[:, i]
 		indices_j = combination_matrix[:, j]
-		sum(M[indices_i,indices_j]) .* 100
+		sum(M[indices_i,indices_j])
 	end
 end;
 
 # ╔═╡ c4339c0d-3962-46f5-ad64-4abed0e88306
-round.(partially_summed_M-paper_matrix, digits=2) 
+round.((partially_summed_M-paper_matrix) ./ δpaper_matrix, digits=2) 
+
+# ╔═╡ 9fef4b8b-0152-4c5d-80e9-59d731a4b83d
+
 
 # ╔═╡ d115dd1c-851e-4d69-859b-6b9767764806
 md"""
 ## Update model
 """
 
+# ╔═╡ 5022e509-3f16-41fc-a89a-3668cef32e03
+bare_couplings = begin
+	_data= open(JSON.parse, joinpath(@__DIR__, "..", "data", "paper_couplings.json"))["couplings"];
+	Dict(k => Meta.parse(v) |> eval |> angle for (k,v) in _data)
+end
+
+# ╔═╡ 18400ff3-9a51-4bdf-aa89-f0cded804fda
+bare_phases = [bare_couplings[w] for w in model_pure.names]
+
 # ╔═╡ 15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 const model = let
     T = typeof(model_pure.couplings)
     values = model_pure.couplings .* sqrt.(diag(M) ./ diag(integral_matrix))
-    values .*= cis.(bast_phases)
+    values .*= cis.(bare_phases) # bast_phases
     @set model_pure.couplings = T(values)
 end
 
@@ -464,6 +495,9 @@ let
         heatmap(M; aspect_ratio, clim, c, title = "paper"),
         grid = (1, 2), size = (700, 300))
 end
+
+# ╔═╡ c0512783-68d7-4e58-b3ad-0786e9546270
+ gloss(bare_phases, integral_matrix, M, δM, sum(M .± δM).err)
 
 # ╔═╡ 8e527f9e-a9d0-437b-8eae-e38fd052cf62
 md"""
@@ -2139,6 +2173,7 @@ version = "1.4.1+2"
 # ╠═2167c35c-9ad4-4f1a-be02-945e430fe9d7
 # ╠═e6097d3e-deb1-4847-8f61-6b1e6de6a646
 # ╠═70654c29-85aa-4aff-af3a-4d505831c8ea
+# ╠═b613f233-0f74-4be3-a05d-9b7d771b71d5
 # ╠═b3af8e27-8b9f-49a8-bf35-601dd67ce65e
 # ╟─942bc39d-063a-4faf-97dc-9f7e3d361465
 # ╠═67f1ce27-701f-4b90-bcf9-4b61e69bea42
@@ -2148,17 +2183,22 @@ version = "1.4.1+2"
 # ╠═e1d3c055-f2f0-4760-ba8c-8f82445dac99
 # ╟─7f98134f-565d-487f-bc5a-b3ca30dd25d8
 # ╠═f8e10abf-9a7d-435a-aa72-77b10ef52838
+# ╠═e0d11ae3-84f2-4a3c-a06d-f2eaa0389519
 # ╠═ac0123a3-4c0d-45bf-8c10-19513e82037e
 # ╠═992a634a-5864-4dbf-922d-c7ea12abccc9
 # ╠═c4339c0d-3962-46f5-ad64-4abed0e88306
+# ╠═9fef4b8b-0152-4c5d-80e9-59d731a4b83d
 # ╟─d115dd1c-851e-4d69-859b-6b9767764806
+# ╠═5022e509-3f16-41fc-a89a-3668cef32e03
+# ╠═18400ff3-9a51-4bdf-aa89-f0cded804fda
 # ╠═15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 # ╠═848a45c0-7802-4865-8347-00ad6cf4e573
+# ╠═c0512783-68d7-4e58-b3ad-0786e9546270
 # ╟─8e527f9e-a9d0-437b-8eae-e38fd052cf62
 # ╠═b4626253-2914-4c7a-b39e-24fefab2673b
 # ╠═108f9da0-baa6-44ff-80e7-b864a73b428e
 # ╟─4c46f63c-7c4b-451c-9283-50da3116b920
-# ╠═6c56df2c-7a97-4eac-b6ff-8cd863fc9142
-# ╠═7dedd655-71a2-449d-97a2-7cc5935be854
+# ╟─6c56df2c-7a97-4eac-b6ff-8cd863fc9142
+# ╟─7dedd655-71a2-449d-97a2-7cc5935be854
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
