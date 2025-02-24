@@ -399,7 +399,7 @@ stephist(chi2_fits, bins = range(0, 100, 100), fill = 0, alpha = 0.4, linealpha 
 # ╔═╡ 70654c29-85aa-4aff-af3a-4d505831c8ea
 begin
     repeated_fits_sorted = sort(repeated_fits, by = x -> x.optimation_result.minimum)
-    bast_phases = repeated_fits_sorted[1].phases
+    best_phases = repeated_fits_sorted[1].phases
     mismatch_interferences = repeated_fits_sorted[1].optimation_result.minimum
 end
 
@@ -455,11 +455,9 @@ end;
 round.((partially_summed_M-paper_matrix) ./ δpaper_matrix, digits=2) 
 
 # ╔═╡ 9fef4b8b-0152-4c5d-80e9-59d731a4b83d
-
-
-# ╔═╡ d115dd1c-851e-4d69-859b-6b9767764806
 md"""
-## Update model
+### Bare couplings
+and their phases
 """
 
 # ╔═╡ 5022e509-3f16-41fc-a89a-3668cef32e03
@@ -471,11 +469,16 @@ end
 # ╔═╡ 18400ff3-9a51-4bdf-aa89-f0cded804fda
 bare_phases = [bare_couplings[w] for w in model_pure.names]
 
+# ╔═╡ d115dd1c-851e-4d69-859b-6b9767764806
+md"""
+## Update model
+"""
+
 # ╔═╡ 15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 const model = let
     T = typeof(model_pure.couplings)
     values = model_pure.couplings .* sqrt.(diag(M) ./ diag(integral_matrix))
-    values .*= cis.(bare_phases) # bast_phases
+    values .*= cis.(best_phases) # bare_phases
     @set model_pure.couplings = T(values)
 end
 
@@ -498,6 +501,9 @@ end
 
 # ╔═╡ c0512783-68d7-4e58-b3ad-0786e9546270
  gloss(bare_phases, integral_matrix, M, δM, sum(M .± δM).err)
+
+# ╔═╡ 6a474b2b-b7fc-43e1-afb3-24ffd837d0f7
+gloss(best_phases, integral_matrix, M, δM, sum(M .± δM).err)
 
 # ╔═╡ 8e527f9e-a9d0-437b-8eae-e38fd052cf62
 md"""
@@ -2187,13 +2193,14 @@ version = "1.4.1+2"
 # ╠═ac0123a3-4c0d-45bf-8c10-19513e82037e
 # ╠═992a634a-5864-4dbf-922d-c7ea12abccc9
 # ╠═c4339c0d-3962-46f5-ad64-4abed0e88306
-# ╠═9fef4b8b-0152-4c5d-80e9-59d731a4b83d
-# ╟─d115dd1c-851e-4d69-859b-6b9767764806
+# ╟─9fef4b8b-0152-4c5d-80e9-59d731a4b83d
 # ╠═5022e509-3f16-41fc-a89a-3668cef32e03
 # ╠═18400ff3-9a51-4bdf-aa89-f0cded804fda
+# ╟─d115dd1c-851e-4d69-859b-6b9767764806
 # ╠═15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 # ╠═848a45c0-7802-4865-8347-00ad6cf4e573
 # ╠═c0512783-68d7-4e58-b3ad-0786e9546270
+# ╠═6a474b2b-b7fc-43e1-afb3-24ffd837d0f7
 # ╟─8e527f9e-a9d0-437b-8eae-e38fd052cf62
 # ╠═b4626253-2914-4c7a-b39e-24fefab2673b
 # ╠═108f9da0-baa6-44ff-80e7-b864a73b428e
