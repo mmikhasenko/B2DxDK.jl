@@ -184,7 +184,7 @@ md"""
 """
 
 # ╔═╡ 869ce97b-f2c5-4f0b-a0f1-531097bfe19d
-const nMC_draft = 400_001;
+const nMC_draft = 800_001;
 
 # ╔═╡ 5a5601d0-45f4-49b3-aad1-faabf9cb17a7
 const phsp_sample = let
