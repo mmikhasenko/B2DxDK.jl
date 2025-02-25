@@ -41,7 +41,7 @@ theme(:boxed)
 md"""
 ## Building model
 
-$B^+ \to D^- D^{*+} K^+$
+$B^+ \to D^- K^+ D^{*+}$
 """
 
 # ╔═╡ db1e2d20-ded6-42e1-8ddc-e965ea1ae60e
@@ -54,12 +54,12 @@ end;
 
 # ╔═╡ 49e4360a-8e84-4ff6-ac9f-9610b929ca60
 (two_js, pc), (_, pv) = map(["0+", "0-"]) do jp0
-    ThreeBodySpinParities("0-", "1-", "0-"; jp0)
+    ThreeBodySpinParities("0-", "0-", "1-"; jp0)
 end;
 
 # ╔═╡ f6f916c4-b18c-4dd5-9522-4b8b0f77d5e0
 tbs = let
-    ms = ThreeBodyMasses(mD, mDx, mK; m0 = mB)
+    ms = ThreeBodyMasses(mD, mK, mDx; m0 = mB)
     ThreeBodySystem(ms, two_js)
 end;
 
@@ -120,28 +120,28 @@ resonances =
 
 # ╔═╡ 8d710e27-93ec-4d81-a090-d679233d0a77
 decay_chains = [
-    (k = 3, resonance_name = "EFF(1++)", l = 0),
-    (k = 3, resonance_name = "EFF(1++)", l = 2),
+    (k = 2, resonance_name = "EFF(1++)", l = 0),
+    (k = 2, resonance_name = "EFF(1++)", l = 2),
     # 
-    (k = 3, resonance_name = "ηc(3945)"),
-    (k = 3, resonance_name = "χc2(3930)"),
-    (k = 3, resonance_name = "hc(4000)", l = 0),
-    (k=3, resonance_name="hc(4000)", l=2),
-    (k = 3, resonance_name = "χc1(4010)", l = 0),
-    (k=3, resonance_name="χc1(4010)", l=2),
-    (k = 3, resonance_name = "ψ(4040)"),
-    (k = 3, resonance_name = "hc(4300)", l = 0),
-    (k=3, resonance_name="hc(4300)", l=2),
+    (k = 2, resonance_name = "ηc(3945)"),
+    (k = 2, resonance_name = "χc2(3930)"),
+    (k = 2, resonance_name = "hc(4000)", l = 0),
+    (k = 2, resonance_name="hc(4000)", l=2),
+    (k = 2, resonance_name = "χc1(4010)", l = 0),
+    (k = 2, resonance_name="χc1(4010)", l=2),
+    (k = 2, resonance_name = "ψ(4040)"),
+    (k = 2, resonance_name = "hc(4300)", l = 0),
+    (k = 2, resonance_name="hc(4300)", l=2),
     # 
-    (k = 3, resonance_name = "NR(1--)"),
-    (k = 3, resonance_name = "NR(0--)"),
-    (k = 3, resonance_name = "NR(1++)", l = 0),
-    (k = 3, resonance_name = "NR(0-+)"),
+    (k = 2, resonance_name = "NR(1--)"),
+    (k = 2, resonance_name = "NR(0--)"),
+    (k = 2, resonance_name = "NR(1++)", l = 0),
+    (k = 2, resonance_name = "NR(0-+)"),
     # 
-    (k = 2, resonance_name = "Tcs0(2870)"),
-    (k = 2, resonance_name = "Tcs1(2900)", L = 0),
-	(k = 2, resonance_name = "Tcs1(2900)", L = 1),
-	(k = 2, resonance_name = "Tcs1(2900)", L = 2)
+    (k = 3, resonance_name = "Tcs0(2870)"),
+    (k = 3, resonance_name = "Tcs1(2900)", L = 0),
+	(k = 3, resonance_name = "Tcs1(2900)", L = 1),
+	(k = 3, resonance_name = "Tcs1(2900)", L = 2)
 ];
 
 # ╔═╡ 4322da22-798f-48d8-af05-216c958bab41
@@ -174,7 +174,7 @@ end;
 const model_pure = let
     names = getproperty.(decay_chains, :resonance_name) .*
             "_l" .* [ch.Hij.two_ls[1] |> d2 for ch in chains]
-	names .*= [(ch.k == 2) ? "_L$(ch.HRk.two_ls[1] |> d2)" : ""  for ch in chains]
+	names .*= [(ch.k == 3) ? "_L$(ch.HRk.two_ls[1] |> d2)" : ""  for ch in chains]
     ThreeBodyDecay(names .=> zip(fill(1.0 + 0.0im, length(chains)), chains))
 end;
 
@@ -184,7 +184,7 @@ md"""
 """
 
 # ╔═╡ 869ce97b-f2c5-4f0b-a0f1-531097bfe19d
-const nMC_draft = 10_000;
+const nMC_draft = 400_001;
 
 # ╔═╡ 5a5601d0-45f4-49b3-aad1-faabf9cb17a7
 const phsp_sample = let
@@ -258,12 +258,12 @@ end;
 # ╔═╡ 556560f6-7d59-4719-92a6-91b54e1b15b6
 const integral_matrix = let
     m1, m2 = integral_computation
-    d1 = diag(m1)
+    d1 = diag(m1) / 4
     d2 = diag(m2)
     #
     sum_d = d1' .+ d1 - 2Diagonal(d1)
     # 
-    m1_off_diag = m1 - Diagonal(d1)
+    m1_off_diag = m1 - Diagonal(m1)
     m1′ = Diagonal(d1) + (m1_off_diag - sum_d) / 2
     # 
     m2_off_diag = m2 - Diagonal(d2)
@@ -281,14 +281,12 @@ let # test if matrix is constructed correctly
     c_rr = c1 + c2
     c_ir = c1 * 1im + c2
     # 
-    @assert (c_rr' * integral_matrix * c_rr) ≈
-            integral_computation.bare_integral_matrix1[i, j]
+    @assert (c_rr' * integral_matrix * c_rr) ≈ integral_computation.m1[i, j]
     #
-    @assert (c_ir' * integral_matrix * c_ir) ≈
-            integral_computation.bare_integral_matrix2[i, j]
+    @assert (c_ir' * integral_matrix * c_ir) ≈ integral_computation.m2[i, j]
     # 
-    @assert integral_matrix[i, i] ≈ integral_computation.bare_integral_matrix1[i, i]
-    @assert integral_matrix[j, j] ≈ integral_computation.bare_integral_matrix1[j, j]
+    @assert integral_matrix[i, i] ≈ integral_computation.m1[i, i] / 4
+    @assert integral_matrix[j, j] ≈ integral_computation.m1[j, j] / 4
 end
 
 # ╔═╡ e42021bf-a6f4-4ad3-bfa8-adbcabceffa3
@@ -491,8 +489,37 @@ md"""
 const model = let
     T = typeof(model_pure.couplings)
     values = model_pure.couplings .* sqrt.(diag(M) ./ diag(integral_matrix))
-    values .*= cis.(best_phases) # bare_phases
-    @set model_pure.couplings = T(values)
+    phases_values =  values .* cis.(best_phases) # bare_phases
+    @set model_pure.couplings = T(phases_values)
+end
+
+# ╔═╡ 73009655-d11f-4167-9e6c-861f61385b75
+let
+	n = length(repeated_fits_sorted[1].phases)
+	_size = 200
+	m = 3
+	l = div(n,m)+1
+	plot(layout=grid(m,l), size=(_size*l, (m+1)*_size),
+		axis=false, aspect_ratio=1, ticks=false, xlim=(-1,1), ylim=(-1,1))
+	#
+	c_abs = sqrt.(diag(M) ./ diag(integral_matrix)) |> real
+	r = sqrt.(c_abs ./ maximum(c_abs))
+	@assert length(r) == n
+	# 
+	map(1:n) do sp
+		plot!(Plots.Shape(reim.(r[sp] .* cis.(range(-π,π,100))));
+			c=:green, alpha=0.3, sp, title=model.names[sp])
+	end
+	map(repeated_fits_sorted[1:5]) do res
+		map(enumerate(res.phases)) do (sp, p)
+			plot!(r[sp] .* [0.0, cis(p)]; sp, lw=5, xlab="", ylab="")
+		end
+	end
+	map(enumerate(bare_phases)) do (sp, p)
+		plot!(r[sp] .* [0.0, cis(p)]; sp, lw=5, xlab="", ylab="",
+			l=(:dash, 4, :black))
+	end
+	plot!()
 end
 
 # ╔═╡ 848a45c0-7802-4865-8347-00ad6cf4e573
@@ -524,7 +551,7 @@ md"""
 """
 
 # ╔═╡ b4626253-2914-4c7a-b39e-24fefab2673b
-plot(masses(model), aspect_ratio = 1, iσx = 3, iσy = 2,
+plot(masses(model), aspect_ratio = 1, iσx = 2, iσy = 3,
     xlab = "m²(D-Dx+) [GeV²]", ylab = "m²(D-K+) [GeV²]",
     c = palette(:viridis)) do σs
     unpolarized_intensity(model, σs)
@@ -540,7 +567,7 @@ md"""
 
 # ╔═╡ 6c56df2c-7a97-4eac-b6ff-8cd863fc9142
 let
-    k = 3
+    k = 2
     ev = range(sqrt.(lims(masses(model); k))..., 90)
     # 
     plot(xlab = "m(D⁻Dˣ⁺) [GeV]")
@@ -563,7 +590,7 @@ end
 
 # ╔═╡ 7dedd655-71a2-449d-97a2-7cc5935be854
 let
-    k = 2
+    k = 3
     ev = range(sqrt.(lims(masses(model); k))..., 50)
     # \^+
     plot(xlab = "m(D⁻K⁺) [GeV]")
@@ -2182,7 +2209,9 @@ version = "1.4.1+2"
 # ╠═869ce97b-f2c5-4f0b-a0f1-531097bfe19d
 # ╠═5a5601d0-45f4-49b3-aad1-faabf9cb17a7
 # ╟─2648555f-3afd-4fec-99bb-11fa82ecb89d
-# ╠═a8f27f31-1ee4-432a-a3fc-04e4c9b0da01
+# ╠═b55a1ceb-d12d-424c-80e5-9198aa83b9b2
+# ╠═5958dc67-7e6e-44ab-8c43-53cfc23a2d92
+# ╠═4cabae49-ce4e-4cde-8e67-7d3c92125d75
 # ╠═556560f6-7d59-4719-92a6-91b54e1b15b6
 # ╟─b41f00af-aa1e-457c-85d8-95b757b499b1
 # ╟─e42021bf-a6f4-4ad3-bfa8-adbcabceffa3
@@ -2209,6 +2238,7 @@ version = "1.4.1+2"
 # ╟─9fef4b8b-0152-4c5d-80e9-59d731a4b83d
 # ╠═5022e509-3f16-41fc-a89a-3668cef32e03
 # ╠═18400ff3-9a51-4bdf-aa89-f0cded804fda
+# ╠═73009655-d11f-4167-9e6c-861f61385b75
 # ╟─d115dd1c-851e-4d69-859b-6b9767764806
 # ╠═15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 # ╠═848a45c0-7802-4865-8347-00ad6cf4e573
