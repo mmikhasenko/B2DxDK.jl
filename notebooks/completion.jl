@@ -184,7 +184,7 @@ md"""
 """
 
 # ╔═╡ 869ce97b-f2c5-4f0b-a0f1-531097bfe19d
-const nMC_draft = 800_001;
+const nMC_draft = 400_001;
 
 # ╔═╡ 5a5601d0-45f4-49b3-aad1-faabf9cb17a7
 const phsp_sample = let
@@ -305,30 +305,6 @@ function gloss(ϕ, X, I, δI, δtot)
 	mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
 end
 
-# ╔═╡ b3af8e27-8b9f-49a8-bf35-601dd67ce65e
-function fit_phases(X, I; δI = fill(1.0, size(I)))
-    #
-    δtot = sum(I .± δI).err
-    # 
-    n = size(X, 1)
-	function loss(ϕ, X, I, δI, δtot)
-    	r = sqrt.(diag(I) ./ diag(X))
-	    _I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
-	    mismatch = I .- _I
-		mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
-	end
-    loss(ϕ_n1) = loss(vcat([0], ϕ_n1), X, I, δI, δtot)
-	# 
-    init_unit = rand(n - 1)
-    init_phases = π .* (2init_unit .- 1)
-    step = 2π / 1000
-    optimation_result = optimize(loss, init_phases, BFGS(
-            initial_invH = x -> Matrix{eltype(x)}(step^2 * LinearAlgebra.I, length(x), length(x)),
-        ), Optim.Options(iterations = 1000), autodiff = :forward)
-    phases = vcat([0.0], optimation_result.minimizer)
-    (; phases, optimation_result)
-end
-
 # ╔═╡ 942bc39d-063a-4faf-97dc-9f7e3d361465
 md"""
 ## Get right fractions
@@ -374,6 +350,31 @@ const δM = from_diag_to_matrix(
     interference_data["uncertainty"] .* 100;
     waves = interference_data["waves"],
     waves_ref = model_pure.names);
+
+# ╔═╡ 2d387906-a5e9-48b0-8967-2e68ccd1d924
+const δMtot = sum(M .± δM).err
+
+# ╔═╡ b3af8e27-8b9f-49a8-bf35-601dd67ce65e
+function fit_phases(X, I; δI = fill(1.0, size(I)))
+    #
+    n = size(X, 1)
+	function loss(ϕ, X, I, δI, δtot)
+    	r = sqrt.(diag(I) ./ diag(X))
+	    _I = abs.(X) .* r .* r' .* cos.(angle.(X) .+ ϕ' .- ϕ)
+	    mismatch = I .- _I
+		mean(abs2, mismatch ./ δI) + abs2((sum(I) - sum(_I)) / δtot)
+	end
+    loss(ϕ_n1) = loss(vcat([0], ϕ_n1), X, I, δI, δMtot)
+	# 
+    init_unit = rand(n - 1)
+    init_phases = π .* (2init_unit .- 1)
+    step = 2π / 1000
+    optimation_result = optimize(loss, init_phases, BFGS(
+            initial_invH = x -> Matrix{eltype(x)}(step^2 * LinearAlgebra.I, length(x), length(x)),
+        ), Optim.Options(iterations = 1000), autodiff = :forward)
+    phases = vcat([0.0], optimation_result.minimizer)
+    (; phases, optimation_result)
+end
 
 # ╔═╡ 8f7b0710-d69f-4f5c-8e93-cc0760ba7496
 repeated_fits = let
@@ -480,6 +481,23 @@ end
 # ╔═╡ 18400ff3-9a51-4bdf-aa89-f0cded804fda
 bare_phases = [bare_couplings[w] for w in model_pure.names]
 
+# ╔═╡ 68afac86-917e-46c6-9580-4cff0348d913
+possible_bare_phases = let
+	n = length(bare_phases)
+	mapslices(rand(Bool, (20000, n)); dims=2) do x
+		flips = 2x .- 1
+		phases = bare_phases .* flips
+		chi2 = gloss(phases, integral_matrix, M, δM, δMtot)
+		(; chi2, phases)
+	end[:,1]
+end;
+
+# ╔═╡ 06e4ad2e-033a-4454-8c10-623dcd44e96e
+stephist(getproperty.(possible_bare_phases, :chi2), bins=range(0, 100, 300))
+
+# ╔═╡ edae6b2a-48f0-49a7-be36-c5f3ac1926b8
+best_bare_phases = sort(possible_bare_phases; by=x->x.chi2)[1].phases
+
 # ╔═╡ d115dd1c-851e-4d69-859b-6b9767764806
 md"""
 ## Update model
@@ -489,7 +507,7 @@ md"""
 const model = let
     T = typeof(model_pure.couplings)
     values = model_pure.couplings .* sqrt.(diag(M) ./ diag(integral_matrix))
-    phases_values =  values .* cis.(best_phases) # bare_phases
+    phases_values =  values .* cis.(best_phases) # best_phases
     @set model_pure.couplings = T(phases_values)
 end
 
@@ -515,7 +533,7 @@ let
 			plot!(r[sp] .* [0.0, cis(p)]; sp, lw=5, xlab="", ylab="")
 		end
 	end
-	map(enumerate(bare_phases)) do (sp, p)
+	map(enumerate(best_bare_phases)) do (sp, p)
 		plot!(r[sp] .* [0.0, cis(p)]; sp, lw=5, xlab="", ylab="",
 			l=(:dash, 4, :black))
 	end
@@ -540,7 +558,7 @@ let
 end
 
 # ╔═╡ c0512783-68d7-4e58-b3ad-0786e9546270
- gloss(bare_phases, integral_matrix, M, δM, sum(M .± δM).err)
+gloss(best_bare_phases, integral_matrix, M, δM, sum(M .± δM).err)
 
 # ╔═╡ 6a474b2b-b7fc-43e1-afb3-24ffd837d0f7
 gloss(best_phases, integral_matrix, M, δM, sum(M .± δM).err)
@@ -2228,6 +2246,7 @@ version = "1.4.1+2"
 # ╠═dc096c5c-1c0e-4356-b9dc-ea99a76c934d
 # ╠═a01515c9-4f11-43f0-ac96-75f395c8d894
 # ╠═9fb5077c-2070-436d-974c-5a4cf9338870
+# ╠═2d387906-a5e9-48b0-8967-2e68ccd1d924
 # ╠═e1d3c055-f2f0-4760-ba8c-8f82445dac99
 # ╟─7f98134f-565d-487f-bc5a-b3ca30dd25d8
 # ╠═f8e10abf-9a7d-435a-aa72-77b10ef52838
@@ -2239,6 +2258,9 @@ version = "1.4.1+2"
 # ╠═5022e509-3f16-41fc-a89a-3668cef32e03
 # ╠═18400ff3-9a51-4bdf-aa89-f0cded804fda
 # ╠═73009655-d11f-4167-9e6c-861f61385b75
+# ╠═68afac86-917e-46c6-9580-4cff0348d913
+# ╠═06e4ad2e-033a-4454-8c10-623dcd44e96e
+# ╠═edae6b2a-48f0-49a7-be36-c5f3ac1926b8
 # ╟─d115dd1c-851e-4d69-859b-6b9767764806
 # ╠═15a95a02-d1d6-4e78-bdf3-6393f1f7c9a2
 # ╠═848a45c0-7802-4865-8347-00ad6cf4e573
