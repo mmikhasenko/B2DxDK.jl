@@ -217,29 +217,42 @@ $I_{ij} = |c_i||c_j||X_{ij}|\cos(Δ_{ij}+\phi_j-\phi_i)$
 
 """
 
-# ╔═╡ a8f27f31-1ee4-432a-a3fc-04e4c9b0da01
-integral_computation = let
-    n = length(model_pure)
-    T = typeof(model_pure.couplings)
-    bare_integral_matrix1 = map(Iterators.product(1:n, 1:n)) do (i, j)
-        mask = (1:n .== i) .|| (1:n .== j)
-        values = model_pure.couplings .* mask
-        # 
-        _model = @set model_pure.couplings = T(values)
-        fs(σs) = unpolarized_intensity(_model, σs)
-        mean(fs, phsp_sample)
-    end
-    bare_integral_matrix2 = map(Iterators.product(1:n, 1:n)) do (i, j)
-        values =
-            model_pure.couplings .* (1:n .== i) .+
-            model_pure.couplings .* (1:n .== j) .* 1im
-        # 
-        _model = @set model_pure.couplings = T(values)
-        fs(σs) = unpolarized_intensity(_model, σs)
-        mean(fs, phsp_sample)
-    end
-    # 
-    (; bare_integral_matrix1, bare_integral_matrix2)
+# ╔═╡ b55a1ceb-d12d-424c-80e5-9198aa83b9b2
+integrals_backup_file = joinpath(@__DIR__, "..", "data", "backup_$(nMC_draft).json");
+
+# ╔═╡ 5958dc67-7e6e-44ab-8c43-53cfc23a2d92
+function integral_matrices(model, phsp_sample)
+	precompute_amps = map(model.chains) do dc
+		fs(σs) = amplitude(dc, σs)
+	    map(fs, phsp_sample)
+	end
+	A = map(Iterators.product(precompute_amps, precompute_amps)) do (_ai,_aj)
+		sample1 = map(x->sum(abs2, x), _ai + _aj)
+		sample2 = map(x->sum(abs2, x), _ai + 1im .* _aj)
+		mean(sample1), mean(sample2), std(sample1), std(sample2)
+	end
+	m1 = getindex.(A,1)
+	m2 = getindex.(A,2)
+	δ1, δ2 = (getindex.(A,3), getindex.(A,4)) ./ sqrt(length(phsp_sample))
+	# 
+	_computation = (; m1, m2, δ1, δ2)
+end
+
+# ╔═╡ 4cabae49-ce4e-4cde-8e67-7d3c92125d75
+integral_computation = if isfile(integrals_backup_file)
+	_content = open(JSON.parse, integrals_backup_file)
+	m1 = hcat(_content["m1"]...)
+	m2 = hcat(_content["m2"]...)
+	δ1 = hcat(_content["δ1"]...)
+	δ2 = hcat(_content["δ2"]...)
+	(; m1, m2, δ1, δ2)
+else
+	_computation = integral_matrices(model_pure, phsp_sample)
+	open(integrals_backup_file, "w") do io
+		JSON.print(io, _computation)
+	end
+	# 
+	_computation
 end;
 
 # ╔═╡ 556560f6-7d59-4719-92a6-91b54e1b15b6
