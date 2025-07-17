@@ -1,4 +1,4 @@
-# B2DxDK - B+ → D- D*+ K+ Decay Analysis
+# B2DxDK Decay Model Analysis
 
 This repository contains a Julia implementation of the analysis for the three-body decay B+ → D- D*+ K+ using Pluto.jl notebooks.
 The project implements the amplitude model for studying this decay channel,
