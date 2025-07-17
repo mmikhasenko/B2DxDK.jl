@@ -9,6 +9,7 @@ including various resonance contributions and interference effects.
 - **Paper**: [arXiv:2406.03156](https://arxiv.org/pdf/2406.03156)
 - **InspireHEP**: [2794793](https://inspirehep.net/literature/2794793)
 - **Internal Documentation**: [TWiki](https://twiki.cern.ch/twiki/bin/viewauth/LHCbPhysics/Bm2DstmDpKm)
+- **Internal Code**: [GitLab@CERN](https://gitlab.cern.ch/lhcb-b2oc/analyses/b2oc-aman-bu2dstdk-run12/-/issues/1), [GitLab@EP1](https://gitlab.ep1.rub.de/lhcb/b2oc-aman-bu2dstdk-run12)
 
 ## Overview
 
