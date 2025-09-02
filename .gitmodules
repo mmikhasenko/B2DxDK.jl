@@ -1,4 +1,4 @@
 [submodule "tf-pwa"]
 	path = tf-pwa
-	url = https://github.com/AlexanderKazatsky/tf-pwa.git
+	url = https://github.com/jiangyj15/tf-pwa.git
 	branch = main
