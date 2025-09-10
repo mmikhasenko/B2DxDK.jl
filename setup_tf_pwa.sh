@@ -2,7 +2,7 @@
 
 ENV_NAME=tf-pwa-env
 PYTHON_VERSION=3.9
-PACKAGE_PATH=~/Desktop/CompProject/New/B2DxDK/tf-pwa
+PACKAGE_PATH=tf-pwa
 
 source $(conda info --base)/etc/profile.d/conda.sh
 
