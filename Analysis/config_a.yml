@@ -79,30 +79,30 @@ particle:
         model: one
     $include: Resonances.yml
     DstD:
-        - Zc(3900)
+        # - Zc(3900)
         - X(3872)
         - X(3915)(0-)
         - chi(c2)(3930)
         - X(3940)(1+)
         - X(3993)
-        - XDstD1pp
-        - X(4020)
+        # - XDstD1pp
+        # - X(4020)
         - Psi(4040)
-        - Zc(4200)
-        - X(4100)
-        - all_psi
-        - chi(c1)(4274)
+        # - Zc(4200)
+        # - X(4100)
+        # - all_psi
+        # - chi(c1)(4274)
         - X(4300)
-        - Psi(4415)
-        - Zc(4430)
-        - X(4600)
-        - XDstD_Scan
+        # - Psi(4415)
+        # - Zc(4430)
+        # - X(4600)
+        # - XDstD_Scan
         - NR(0-)SPp
-        - NR(1-)PPp
+        # - NR(1-)PPp
         - NR(1+)PSp
         - NR(0-)SPm
         - NR(1-)PPm
-        - NR(1+)PSm
+        # - NR(1+)PSm
     DstK: []
     DK: [X0(2900), X1(2900)]
     XDstD_Scan:
