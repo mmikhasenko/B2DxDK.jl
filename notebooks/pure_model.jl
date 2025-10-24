@@ -123,23 +123,20 @@ decay_chains = [
 chains = let
     resonance_dict = LittleDict(
         resonances.name .=> NamedTuple.(eachrow(resonances)))
-    # 	
+    #
     map(decay_chains) do dc
         @unpack k, resonance_name = dc
         _jp = resonance_dict[resonance_name].jp
-        comprete_data = complete_l_s_L_S(_jp, tbs.two_js, [pc, pv], dc; k)
+        comprete_data = complete_l_s_L_S(_jp, tbs.two_js, [pc, pv], dc; k) # takes into account l and L from named tuple
         @unpack L, S, l, s = comprete_data
         # 
         two_j = _jp.two_j
         # 
         d = 3.0
-        X = resonance_dict[resonance_name].lineshape
-        ff_Rk = BlattWeisskopf{div(x2(L), 2)}(d)(breakup_Rk(tbs.ms; k))
-        ff_ij = BlattWeisskopf{div(x2(l), 2)}(d)(breakup_ij(tbs.ms; k))
-        Xlineshape = X * ff_Rk * ff_ij
+        Xlineshape = resonance_dict[resonance_name].lineshape
         # 
-        HRk = RecouplingLS((L, S) .|> x2)
-        Hij = RecouplingLS((l, s) .|> x2)
+        HRk = VertexFunction(RecouplingLS((L, S) .|> x2), BlattWeisskopf{div(x2(L), 2)}(d))
+        Hij = VertexFunction(RecouplingLS((l, s) .|> x2), BlattWeisskopf{div(x2(l), 2)}(d))
         # 
         DecayChain(; k, two_j, Xlineshape, Hij, HRk, tbs)
     end
@@ -147,22 +144,56 @@ end;
 
 const model_pure = let
     names = getproperty.(decay_chains, :resonance_name) .*
-            "_l" .* [ch.Hij.two_ls[1] |> d2 for ch in chains]
-    names .*= [(ch.k == 3) ? "_L$(ch.HRk.two_ls[1] |> d2)" : "" for ch in chains]
+            "_l" .* [ch.Hij.h.two_ls[1] |> d2 for ch in chains]
+    names .*= [(ch.k == 3) ? "_L$(ch.HRk.h.two_ls[1] |> d2)" : "" for ch in chains]
     ThreeBodyDecay(names .=> zip(fill(1.0 + 0.0im, length(chains)), chains))
 end;
 
 
-function full_amplitude(three_body_model, σs, cosθ, ϕ)
+
+
+# compute full amplitude
+
+struct DalitzAndDecay{T}
+    σs::MandelstamTuple{T}
+    cosθ::T
+    ϕ::T
+end
+
+function ThreeBodyDecays.amplitude(three_body_model::ThreeBodyDecay, dd::DalitzAndDecay)
+    @unpack σs, cosθ, ϕ = dd
     total_amp = 0.0
-    for λ in -1:1
-        _O = amplitude(three_body_model, σs, ThreeBodySpins(0,0,λ; h0=0))
-        _D = wignerD(1, 0, λ, ϕ, cosθ, 0.0) |> conj
-        total_amp += _O * _D
-    end
-    total_amp
+    jDx = 1
+    _O = amplitude(three_body_model, σs) # order: -1,0,1
+    _D = [wignerD(jDx, λ, 0, ϕ, cosθ, 0.0) for λ in -1:1] .|> conj # order: -1,0,1
+    total_amp = sum(reshape(_O, 3) .* _D)
+    return total_amp
 end
 
 
+
+# testing
+
+
+
+Random.seed!(1234)
 σs0 = randomPoint(masses(model_pure))
-full_amplitude(model_pure, σs0, 0.0, 0.0)
+test_point = DalitzAndDecay(σs0, 0.3, 0.2)
+amplitude(model_pure, test_point)
+
+# number of chains
+length(model_pure.names)
+
+println("## Names of the chains")
+for (i, name) in enumerate(model_pure.names)
+    println("$i. $name")
+end
+
+
+# calling amplitude on one chain only
+
+model_with_one_chain = model_pure[3]
+amplitude(model_with_one_chain, test_point)
+
+
+
