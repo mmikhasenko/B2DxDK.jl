@@ -62,15 +62,14 @@ end
 const EFF = BreitWigner(3.85, 0.001);
 
 
-begin
-    @with_kw struct NRexp <: HadronicLineshapes.AbstractFlexFunc
-        αβ::ComplexF64
-        m0::Float64
-    end
-    (f::NRexp)(σ::Float64) = exp(f.αβ * (σ - f.m0^2))
-    # 
-    const ConstantLineshape = WrapFlexFunction(x -> 1.0)
+@with_kw struct NRexp <: HadronicLineshapes.AbstractFlexFunc
+    αβ::ComplexF64
+    m0::Float64
 end
+(f::NRexp)(σ::Float64) = exp(f.αβ * (σ - f.m0^2))
+# 
+struct ConstantLineshape <: HadronicLineshapes.AbstractFlexFunc end
+(f::ConstantLineshape)(σ::Float64) = 1.0
 
 
 # Decay chains
@@ -89,9 +88,9 @@ resonances =
         (; jp = jp"0+", name = "Tcs0(2870)", lineshape = BreitWigner(m = 2.914, Γ = 0.128, ma = mD, mb = mK, l = 0, d = 3.0)),
         (; jp = jp"1-", name = "Tcs1(2900)", lineshape = BreitWigner(m = 2.887, Γ = 0.092, ma = mD, mb = mK, l = 1, d = 3.0)),
         # NR
-        (; jp = jp"1-", name = "NR(1--)", lineshape = ConstantLineshape),
-        (; jp = jp"0-", name = "NR(0--)", lineshape = ConstantLineshape),
-        (; jp = jp"1+", name = "NR(1++)", lineshape = ConstantLineshape),
+        (; jp = jp"1-", name = "NR(1--)", lineshape = ConstantLineshape()),
+        (; jp = jp"0-", name = "NR(0--)", lineshape = ConstantLineshape()),
+        (; jp = jp"1+", name = "NR(1++)", lineshape = ConstantLineshape()),
         (; jp = jp"0-", name = "NR(0-+)", lineshape = NRexp(αβ = 0.11 - 0.34im, m0 = 4.35)),
     ] |> DataFrame
 
@@ -174,12 +173,12 @@ end
 
 # testing
 
-
-
 Random.seed!(1234)
 σs0 = randomPoint(masses(model_pure))
 test_point = DalitzAndDecay(σs0, 0.3, 0.2)
 amplitude(model_pure, test_point)
+
+
 
 # number of chains
 length(model_pure.names)
@@ -194,6 +193,5 @@ end
 
 model_with_one_chain = model_pure[3]
 amplitude(model_with_one_chain, test_point)
-
 
 

@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "1efdb07467a0f2a0862e371de3ef536be14e3a63"
+project_hash = "217e3771ee4892beb547335a0dffba9e9fe7a212"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "27cecae79e5cc9935255f90c53bb831cc3c870d7"
@@ -345,6 +345,11 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "27af30de8b5445644e8ffe3bcb0d72049c089cf1"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.7.3+0"
+
+[[deps.ExprTools]]
+git-tree-sha1 = "27415f162e6028e81c72b82ef756bf321213b6ec"
+uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+version = "0.1.10"
 
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
@@ -1065,6 +1070,12 @@ git-tree-sha1 = "62389eeff14780bfe55195b7204c0d8738436d64"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "1.3.1"
 
+[[deps.RuntimeGeneratedFunctions]]
+deps = ["ExprTools", "SHA", "Serialization"]
+git-tree-sha1 = "86a8a8b783481e1ea6b9c91dd949cb32191f8ab4"
+uuid = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
+version = "0.5.15"
+
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
@@ -1240,6 +1251,14 @@ deps = ["Parameters", "PartialWaveFunctions", "PolynomialRoots", "Polynomials", 
 git-tree-sha1 = "6a9f51636bb28731e1ba1fc83a7e0d09b84bb70c"
 uuid = "e6563dab-9ca1-5843-bde3-2ccf38d63843"
 version = "0.13.0"
+
+[[deps.ThreeBodyDecaysIO]]
+deps = ["DataFrames", "HadronicLineshapes", "JSON", "MacroTools", "OrderedCollections", "Parameters", "Polynomials", "Random", "RuntimeGeneratedFunctions", "ThreeBodyDecays"]
+git-tree-sha1 = "653fdfe480357ff626e9c007f02cb55317b89e86"
+repo-rev = "main"
+repo-url = "https://github.com/mmikhasenko/ThreeBodyDecaysIO.jl.git"
+uuid = "418e7ecf-680e-4cb5-ad61-5e2f006aefac"
+version = "0.9.0"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
