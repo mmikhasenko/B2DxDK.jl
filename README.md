@@ -82,3 +82,10 @@ Steps to make the analysis code operational:
   - `./setup_tf_pwa.sh`
 
  The current analysis can be found in `Analysis/Amplitude.ipynb`.
+
+
+ ## Automation of complex amplitude calculation and comparison
+
+ The simulation comparison between tf_pwa and the ThreeBodyDecay framework has been recreated and expanded by linking all given information about tf_pwa (config files, GitHub repositoriy, etc.) to a NotebookLM notebook and generating a python code to calculate the complex amplitudes for individual decay chains and LS couplings. Afterwards the generated file and `the pure_model.jl` file were given to the Antigravity AI agent (Gemini 3 Pro (High)) to implove the generated code and align the hard coded parameters inside `pure_model.jl` to `config_a.yml` and `final_params.json`.
+
+ The resulting Python and Julia codes are stored in `Analysis/tf_pwa_analysis_Gemini.py` and `notebook/ThreeBodyDecay_Gemini.jl` respectively. To execute the scripts, run `tf_pwa_analysis_Gemini.py` inside the conda environment created by `setup_tf_pwa.sh` and `ThreeBodyDecay_Gemini.jl` afterwards. This will generate (or regenerate) the `amplitudes.txt` file in the `Analysis` directory.
