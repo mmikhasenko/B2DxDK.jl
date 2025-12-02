@@ -74,6 +74,8 @@ pD0_vec = [2.2606, 0.2284, -0.3689, 1.2019]
 pK_vec = [0.7718, -0.0873, 0.1803, -0.5584]
 ppi_vec = [0.2017, 0.0056, -0.0349, 0.1413]
 
+pD_vec + pD0_vec + pK_vec + ppi_vec
+
 # Compute D* 4-vector
 pDx_vec = pD0_vec + ppi_vec
 
