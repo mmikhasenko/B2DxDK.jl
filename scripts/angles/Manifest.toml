@@ -2,10 +2,14 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "a85fd02ef6f1b30a617f0f138deede4105e7b07e"
+project_hash = "48479e0fb17b060b35903e5302a0e0a8e61c7d86"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
+version = "1.11.0"
+
+[[deps.Base64]]
+uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 version = "1.11.0"
 
 [[deps.CompilerSupportLibraries_jll]]
@@ -26,6 +30,19 @@ repo-url = "https://github.com/mmikhasenko/FourVectors.jl.git"
 uuid = "b122eb78-8380-428a-b8c8-584a022ae8b6"
 version = "0.3.1"
 
+[[deps.InteractiveUtils]]
+deps = ["Markdown"]
+uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+version = "1.11.0"
+
+[[deps.LazyDecayAngles]]
+deps = ["FourVectors", "LinearAlgebra", "Test"]
+git-tree-sha1 = "c551f53606ec364127856ccb7be33b757ecef96f"
+repo-rev = "main"
+repo-url = "https://github.com/mmikhasenko/LazyDecayAngles.jl.git"
+uuid = "1d606af4-d0f8-4ff7-bc8d-eb3f657b7647"
+version = "0.1.0"
+
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 version = "1.11.0"
@@ -35,10 +52,19 @@ deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 version = "1.11.0"
 
+[[deps.Logging]]
+uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+version = "1.11.0"
+
 [[deps.LorentzVectorBase]]
 git-tree-sha1 = "a89ca3c383ca502301d19d4d72ae0766619c1bf1"
 uuid = "592a752d-6533-4762-a71b-738712ea30ec"
 version = "0.1.0"
+
+[[deps.Markdown]]
+deps = ["Base64"]
+uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+version = "1.11.0"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
@@ -82,6 +108,10 @@ version = "1.11.0"
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
+[[deps.Serialization]]
+uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+version = "1.11.0"
+
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
 git-tree-sha1 = "b8693004b385c842357406e3af647701fe783f98"
@@ -105,6 +135,11 @@ version = "1.4.4"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.3"
+
+[[deps.Test]]
+deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
+uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+version = "1.11.0"
 
 [[deps.UnPack]]
 git-tree-sha1 = "387c1f73762231e86e0c9c5443ce3b4a0a9a0c2b"
