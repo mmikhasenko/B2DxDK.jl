@@ -32,14 +32,19 @@ B2DxDK/
 │   └── completion.jl          # Main Pluto.jl notebook
 ├── data/
 │   ├── interference_paper.json    # Paper results for comparison
-│   ├── interference_tf.json      # TensorFlow results
+│   ├── interference_tf.json       # TensorFlow results
 │   ├── paper_couplings.json      # Coupling parameters
 │   ├── backup_400001.json        # Precomputed integrals
-│   └── ...                      # Additional data files
+│   ├── crosscheck_event.json     # Single event used for angular cross-checks
+│   └── ...                       # Additional data files
 ├── scripts/
-│   └── cal_pw_fraction.py       # Python script for partial wave analysis
+│   ├── cal_pw_fraction.py        # Python script for partial wave analysis
+│   └── angles/                   # Julia scripts to cross-check angular conventions
 └── README.md
 ```
+
+The `scripts/angles` folder contains small Julia programs (e.g. `explicit.jl`, `with_LDA.jl`) that compute decay angles and cross-check the angular conventions used in the analysis.  
+The file `data/crosscheck_event.json` provides a representative event whose four-vectors and derived angles are used as a reference input for these checks.
 
 ## Installation and Usage
 
