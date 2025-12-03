@@ -96,7 +96,7 @@ To execute them, set up the environment and run the scripts in the following ord
 
 ```bash
 
-./setup_tf_pwa.sh # set up env
+./setup_tf_pwa_with_conda.sh # set up env
 
 # first run
 python Analysis/tf_pwa_analysis_Gemini.py
