@@ -172,28 +172,43 @@ end
 
 
 
-# testing
+# testing: use the DPD configuration from data/crosscheck_event.json
 
+json_path = joinpath(@__DIR__, "..", "data", "crosscheck_event.json")
+event = JSON.parsefile(json_path)
+dpd = event["dpd_kinematics"]
 
+# Map DPD invariants to the Mandelstam variables for (D, K, Dx)
+# Convention in ThreeBodyDecays: σ₁ = m²(23), σ₂ = m²(13), σ₃ = m²(12)
+# Here: 1 ≡ D, 2 ≡ K, 3 ≡ Dx
+σs_dpd = (
+    σ1 = dpd["msq_KDx"],  # m²(K, Dx)  → pair (2,3)
+    σ2 = dpd["msq_DxD"],  # m²(D, Dx)  → pair (1,3)
+    σ3 = dpd["msq_DK"],   # m²(D, K)   → pair (1,2)
+)
 
-Random.seed!(1234)
-σs0 = randomPoint(masses(model_pure))
-test_point = DalitzAndDecay(σs0, 0.3, 0.2)
-amplitude(model_pure, test_point)
+dalitz_dpd = DalitzAndDecay(
+    σs_dpd,
+    dpd["cos_theta_D_in_Dx"],
+    dpd["phi_D_in_Dx"],
+)
 
-# number of chains
-length(model_pure.names)
+full_amplitude = amplitude(model_pure, dalitz_dpd)
 
-println("## Names of the chains")
-for (i, name) in enumerate(model_pure.names)
-    println("$i. $name")
-end
+println("## Amplitude at DPD cross-check event")
+println("DalitzAndDecay = ", dalitz_dpd)
+println("amplitude(model_pure, dalitz_dpd) = ", full_amplitude)
 
+# amplitudes for individual decay chains
+println("\n## Amplitudes per decay chain at DPD cross-check event")
+chain_amps = [
+    (chain_name = name,
+     amplitude  = amplitude(model_pure[i], dalitz_dpd))
+    for (i, name) in enumerate(model_pure.names)
+]
 
-# calling amplitude on one chain only
+df_chain_amps = DataFrame(chain_amps)
+println(df_chain_amps)
 
-model_with_one_chain = model_pure[3]
-amplitude(model_with_one_chain, test_point)
-
-
+@assert df_chain_amps.amplitude |> sum ≈ full_amplitude atol=1e-10
 
