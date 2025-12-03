@@ -32,14 +32,19 @@ B2DxDK/
 │   └── completion.jl          # Main Pluto.jl notebook
 ├── data/
 │   ├── interference_paper.json    # Paper results for comparison
-│   ├── interference_tf.json      # TensorFlow results
+│   ├── interference_tf.json       # TensorFlow results
 │   ├── paper_couplings.json      # Coupling parameters
 │   ├── backup_400001.json        # Precomputed integrals
-│   └── ...                      # Additional data files
+│   ├── crosscheck_event.json     # Single event used for angular cross-checks
+│   └── ...                       # Additional data files
 ├── scripts/
-│   └── cal_pw_fraction.py       # Python script for partial wave analysis
+│   ├── cal_pw_fraction.py        # Python script for partial wave analysis
+│   └── angles/                   # Julia scripts to cross-check angular conventions
 └── README.md
 ```
+
+The `scripts/angles` folder contains small Julia programs (e.g. `explicit.jl`, `with_LDA.jl`) that compute decay angles and cross-check the angular conventions used in the analysis.  
+The file `data/crosscheck_event.json` provides a representative event whose four-vectors and derived angles are used as a reference input for these checks.
 
 ## Installation and Usage
 
@@ -68,3 +73,58 @@ Any problems at this step, should be reported in the project issue tracker.
 3. **Run the analysis**:
    - The notebook will automatically install required dependencies
    - Execute cells sequentially to perform the analysis
+
+
+### Using the amplitude extraction
+
+This repository includes a slightly modified version of tf_pwa (https://github.com/jiangyi15/tf-pwa).
+
+Steps to make the analysis code operational:
+
+#### Option A: Conda-based setup (original)
+- Conda has to be installed on the system
+- Clone this repository
+- In console (inside the repo folder):
+  - `chmod +x setup_tf_pwa_with_conda.sh`
+  - `./setup_tf_pwa_with_conda.sh`
+
+#### Option B: venv-based setup (no Conda)
+
+From the project root:
+
+```bash
+chmod +x setup_tf_pwa_with_venv.sh
+./setup_tf_pwa_with_venv.sh
+
+# install tf_pwa into the virtual environment
+source venv/bin/activate
+pip install git+https://github.com/jiangyi15/tf-pwa.git
+deactivate
+```
+
+The current analysis can be found in `Analysis/Amplitude.ipynb`.
+
+
+## Automation of complex amplitude calculation and comparison
+
+The simulation-based comparison between `tf_pwa` and the `ThreeBodyDecays` framework has been recreated and extended. All available information on `tf_pwa` (configuration files, GitHub repository, etc.) was linked to a NotebookLM notebook to generate Python code that evaluates complex amplitudes for individual decay chains and LS couplings. The generated Python code and the `pure_model.jl` file were then provided to the Antigravity AI agent (Gemini 3 Pro (High)) to improve the implementation and align the hard-coded parameters in `pure_model.jl` with those in `config_a.yml` and `final_params_full.json` (a renamed but otherwise identical copy of `final_params.json`).
+
+The resulting Python and Julia scripts are stored in
+- `Analysis/tf_pwa_analysis_Gemini.py` and
+- `notebook/ThreeBodyDecay_analysis_Gemini.jl`, respectively.
+
+To execute them, set up the environment (Conda or venv, see above) and run the scripts in the following order:
+
+```bash
+# first run the tf_pwa-based analysis
+source venv/bin/activate    # or `conda activate tf-pwa-env` if you used Conda
+cd Analysis
+python tf_pwa_analysis_Gemini.py
+cd ..
+deactivate
+
+# and then run the Julia cross-check
+julia notebooks/ThreeBodyDecay_analysis_Gemini.jl
+```
+
+This will generate (or regenerate) the `amplitudes.txt` file in the `Analysis` directory.
