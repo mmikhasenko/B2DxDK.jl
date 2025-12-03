@@ -75,13 +75,29 @@ Any problems at this step, should be reported in the project issue tracker.
 This repository includes a slightly modified version of tf_pwa (https://github.com/jiangyi15/tf-pwa).
 
 Steps to make the analysis code operational:
+
+#### Option A: Conda-based setup (original)
 - Conda has to be installed on the system
 - Clone this repository
 - In console (inside the repo folder):
-  - `chmod +x setup_tf_pwa.sh`
-  - `./setup_tf_pwa.sh`
+  - `chmod +x setup_tf_pwa_with_conda.sh`
+  - `./setup_tf_pwa_with_conda.sh`
 
- The current analysis can be found in `Analysis/Amplitude.ipynb`.
+#### Option B: venv-based setup (no Conda)
+
+From the project root:
+
+```bash
+chmod +x setup_tf_pwa_with_venv.sh
+./setup_tf_pwa_with_venv.sh
+
+# install tf_pwa into the virtual environment
+source venv/bin/activate
+pip install git+https://github.com/jiangyi15/tf-pwa.git
+deactivate
+```
+
+The current analysis can be found in `Analysis/Amplitude.ipynb`.
 
 
 ## Automation of complex amplitude calculation and comparison
@@ -92,16 +108,17 @@ The resulting Python and Julia scripts are stored in
 - `Analysis/tf_pwa_analysis_Gemini.py` and
 - `notebook/ThreeBodyDecay_analysis_Gemini.jl`, respectively.
 
-To execute them, set up the environment and run the scripts in the following order:
+To execute them, set up the environment (Conda or venv, see above) and run the scripts in the following order:
 
 ```bash
+# first run the tf_pwa-based analysis
+source venv/bin/activate    # or `conda activate tf-pwa-env` if you used Conda
+cd Analysis
+python tf_pwa_analysis_Gemini.py
+cd ..
+deactivate
 
-./setup_tf_pwa_with_conda.sh # set up env
-
-# first run
-python Analysis/tf_pwa_analysis_Gemini.py
-
-# and then run 
+# and then run the Julia cross-check
 julia notebooks/ThreeBodyDecay_analysis_Gemini.jl
 ```
 
