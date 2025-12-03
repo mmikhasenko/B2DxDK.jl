@@ -84,8 +84,25 @@ Steps to make the analysis code operational:
  The current analysis can be found in `Analysis/Amplitude.ipynb`.
 
 
- ## Automation of complex amplitude calculation and comparison
+## Automation of complex amplitude calculation and comparison
 
- The simulation comparison between `tf_pwa` and the `ThreeBodyDecays` framework has been recreated and expanded by linking all given information about `tf_pwa` (config files, GitHub repositoriy, etc.) to a NotebookLM notebook and generating a python code to calculate the complex amplitudes for individual decay chains and LS couplings. Afterwards the generated file and `the pure_model.jl` file were given to the Antigravity AI agent (Gemini 3 Pro (High)) to implove the generated code and align the hard coded parameters inside `pure_model.jl` to `config_a.yml` and `final_params_full.json` (a renamed but otherwise identical version of `final_params.json`).
+The simulation-based comparison between `tf_pwa` and the `ThreeBodyDecays` framework has been recreated and extended. All available information on `tf_pwa` (configuration files, GitHub repository, etc.) was linked to a NotebookLM notebook to generate Python code that evaluates complex amplitudes for individual decay chains and LS couplings. The generated Python code and the `pure_model.jl` file were then provided to the Antigravity AI agent (Gemini 3 Pro (High)) to improve the implementation and align the hard-coded parameters in `pure_model.jl` with those in `config_a.yml` and `final_params_full.json` (a renamed but otherwise identical copy of `final_params.json`).
 
- The resulting Python and Julia codes are stored in `Analysis/tf_pwa_analysis_Gemini.py` and `notebook/ThreeBodyDecay_analysis_Gemini.jl` respectively. To execute the scripts, run `tf_pwa_analysis_Gemini.py` inside the conda environment created by `setup_tf_pwa.sh` and `ThreeBodyDecay_analysis_Gemini.jl` afterwards. This will generate (or regenerate) the `amplitudes.txt` file in the `Analysis` directory.
+The resulting Python and Julia scripts are stored in
+- `Analysis/tf_pwa_analysis_Gemini.py` and
+- `notebook/ThreeBodyDecay_analysis_Gemini.jl`, respectively.
+
+To execute them, set up the environment and run the scripts in the following order:
+
+```bash
+
+./setup_tf_pwa.sh # set up env
+
+# first run
+python Analysis/tf_pwa_analysis_Gemini.py
+
+# and then run 
+julia notebooks/ThreeBodyDecay_analysis_Gemini.jl
+```
+
+This will generate (or regenerate) the `amplitudes.txt` file in the `Analysis` directory.
