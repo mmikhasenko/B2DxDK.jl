@@ -5,9 +5,6 @@ Not needed for the current production workflow.
 
 **Production** lives at the repo root: [`src/`](../src/) (B2DxDK package), [`test/`](../test/) (regression checks), [`scripts/`](../scripts/) (fit-fraction analysis), and [`data/`](../data/) (couplings and event samples). Entry point: [`test/runtests.jl`](../test/runtests.jl). See the [root README](../README.md).
 
-Extended documentation from the previous README (physics background, project layout, TF-PWA notes):
-→ [README_detailed.md](README_detailed.md)
-
 ---
 
 ## investigation/
@@ -33,6 +30,13 @@ Cross-check against TF-PWA when all four momenta are sampled from flat 4-body ph
 Small standalone Julia scripts that cross-check helicity and decay-angle conventions. Uses `archive/data/crosscheck_event.json`.
 
 → [angles/README.md](angles/README.md)
+
+## notes/
+
+Working notes on helicity/LS conventions — the reasoning behind the particle-2 signs
+that survive in `src/matching.jl`, and the CascadeDecays v0.4.0 upgrade.
+
+→ [notes/README.md](notes/README.md)
 
 ## data/
 

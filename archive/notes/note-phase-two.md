@@ -1,5 +1,14 @@
 # Particle-2 phase and partial-wave mixing (X1(2900) dk root)
 
+> **Superseded in part.** This note analyses the model as built on
+> `CascadeDecays v0.1.0`, where the particle-2 phase was applied in the vertex
+> coupling but *not* in the helicity-frame descent. `CascadeDecays v0.4.0`
+> applies both halves, which turns the TF-PWA discrepancy into a per-chain
+> constant $(-1)^{j_2}$ and removes the need for `MissingParticleTwoPhaseLS`
+> (deleted). The partial-wave algebra below is unchanged and still holds; the
+> conclusion about needing a helicity-dependent recoupling no longer applies.
+> See [`note-cascadedecays-v040.md`](note-cascadedecays-v040.md).
+
 Notes on Issue A in the B2DxDK ↔ TF-PWA mapping: why the Jacob–Wick
 particle-2 phase cannot be dropped or absorbed into a scalar matching factor,
 even for integer-spin mesons.
@@ -8,9 +17,9 @@ even for integer-spin mesons.
 Three production partial waves $(L,S)=(0,0),(1,1),(2,2)$ with LS couplings
 $g_{00}, g_{11}, g_{22}$.
 
-**Code:** validated against `RecouplingLS`, `CascadeDecays.routed_vertex_amplitude`,
-and `MissingParticleTwoPhaseLS` — see
-[`test/particle2_algebra.jl`](test/particle2_algebra.jl).
+**Code:** was validated against `RecouplingLS`, `CascadeDecays.routed_vertex_amplitude`,
+and `MissingParticleTwoPhaseLS` in `test/particle2_algebra.jl`, deleted together with
+the workaround in the v0.4.0 upgrade (recoverable from git history).
 
 ---
 
@@ -197,10 +206,11 @@ dropping any LS term. This is not removable by a scalar `matching_factor`;
 
 ## Code validation
 
-Run from the repo root:
+Run from the repo root, against the v0.1.0 model — `test/particle2_algebra.jl`
+was removed in the v0.4.0 upgrade:
 
 ```bash
-julia --project=. test/particle2_algebra.jl
+git show 9730dcb:test/particle2_algebra.jl > /tmp/particle2_algebra.jl
 ```
 
 | Test | Statement | Result |
