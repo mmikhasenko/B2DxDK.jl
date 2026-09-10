@@ -43,6 +43,12 @@ convention with the alignment rotation **stored as data instead of applied**.
 measuring against realigned axes agree to ~1e-15 at every vertex of both
 topologies.
 
+**EDIT.** Same caveat as [`README.md`](README.md): this identity is about how
+*vertex* Euler angles are measured (`ToHelicityFrame` vs stored axes). It does
+not say the two frameworks' helicity conventions agree in the amplitude.
+Particle-2 frame descent and `MAGIC_SIGNS` live on `helicity_frame_path` /
+`wigner_finals`, which these scripts do not cover.
+
 That framing is what makes an IDT expression possible at all. The previous
 prototype treated the two as unrelated algorithms and ended up transliterating
 one into the other's syntax (§6).

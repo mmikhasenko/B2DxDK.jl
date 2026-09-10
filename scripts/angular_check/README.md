@@ -10,6 +10,24 @@ Conclusion: for **vertex angles** the two agree to 4.6e-13 rad worst case over
 10k phase-space points, provided `initial_frame = CurrentFrame()`. See
 [issue #22](https://github.com/RUB-EP1/B2DxDK.jl/issues/22).
 
+**EDIT.** Do not read the paragraph above as “TF-PWA and CascadeDecays use the
+same helicity angles, so the amplitude model matches.” These scripts show a
+narrower kinematic identity: the *vertex* \((\phi,\theta)\) that enter the
+two-body \(D\)-function, measured with `CurrentFrame()`, agree between
+CascadeDecays' realigning `ToHelicityFrame` and a **Julia port** of TF-PWA's
+boost + cross-product construction. They do not call live TF-PWA, they are not
+in `test/runtests.jl`, and they do not cover `helicity_frame_path` /
+`wigner_finals`.
+
+On that untested path the angles and the recoupling formulas **differ**.
+CascadeDecays applies the Jacob–Wick particle-2 convention (frame \(\varphi\to\varphi+\pi\)
+on \(X\to DK\), and \((-1)^{j_2-\lambda_2}\) in `RecouplingLS`); TF-PWA omits
+both. After CascadeDecays v0.4.0 the two halves combine into a constant
+per-chain sign, absorbed in `MAGIC_SIGNS`. The production check is the complex
+amplitude against `data/crosscheck_amplitudes_reference.txt`, not angle
+equality. See [`src/matching.jl`](../../src/matching.jl) and
+[`archive/notes/note-cascadedecays-v040.md`](../../archive/notes/note-cascadedecays-v040.md).
+
 | file | what it is |
 |---|---|
 | `CrossProductWalk.jl` | the algorithm as an InstructionalDecayTrees program — four instructions, axes carried inside `objs`, no sidecar |
